@@ -1,4 +1,12 @@
 <template>
-  <h1>Collection</h1>
-  <!-- TODO : Afficher la liste des cartes de l'utilisateur. Y créer le système de filtre (recherche + filtre par catégorie) -->
+  <CardBrowser
+    title="Ma collection"
+    subtitle="Gérez votre collection, filtrez et exportez vos cartes."
+    :cards="collectionCards"
+  />
 </template>
+
+<script setup lang="ts">
+import CardBrowser from '@/components/collection/CardBrowser.vue'
+import { collectionCards } from '@/mocks/cards'
+</script>
