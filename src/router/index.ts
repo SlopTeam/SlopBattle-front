@@ -11,7 +11,12 @@ const router = createRouter({
     },
     // Collection
     {
-      path: '/collection',
+      path: '/catalogue',
+      name: 'catalogue',
+      component: () => import('@/views/collection/CatalogueView.vue'),
+    },
+    {
+      path: '/profile/collection',
       name: 'collection_list',
       component: () => import('@/views/collection/CollectionView.vue'),
     },

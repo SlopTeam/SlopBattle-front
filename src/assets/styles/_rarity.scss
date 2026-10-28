@@ -1,0 +1,24 @@
+@use 'sass:color';
+@use 'sass:map';
+@use 'abstracts' as *;
+
+// Any element with `data-rarity` (card, badge, icon…) gets its rarity variables.
+@each $rarity, $tokens in $rarities {
+  $border: map.get($tokens, border);
+  $glow-blur: map.get($tokens, glow-blur);
+  $texture: map.get($tokens, texture) or $rarity;
+
+  [data-rarity='#{$rarity}'] {
+    --rarity-border: #{$border};
+    --rarity-badge-bg: #{map.get($tokens, badge-bg)};
+    --rarity-badge-text: #{map.get($tokens, badge-text)};
+    --rarity-texture: url('@/assets/textures/border-#{$texture}.png');
+
+    @if $glow-blur {
+      $glow-color: color.change($border, $alpha: map.get($tokens, glow-alpha));
+      --rarity-glow: 0 0 #{$glow-blur} #{$glow-color};
+    } @else {
+      --rarity-glow: none;
+    }
+  }
+}

@@ -1,0 +1,9 @@
+// Self-hosted fonts. To switch font: replace the files in `assets/fonts/` and this block,
+// then update `--font-family-base` in `_tokens.scss`. Components never name a font.
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('@/assets/fonts/inter/InterVariable.woff2') format('woff2');
+}
