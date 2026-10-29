@@ -2,8 +2,17 @@ import axios from 'axios'
 
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
-  // On lit le corps de la réponse nous-mêmes : le back renvoie ses erreurs en 200 ou en 400
+  // We read the body ourselves: the back sends its GraphQL errors with a 200 or a 400
   validateStatus: () => true,
+})
+
+export const TOKEN_KEY = 'token'
+
+// The upcoming auth system will store the token under this key; here we only send it
+http.interceptors.request.use((config) => {
+  const token = localStorage.getItem(TOKEN_KEY)
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
 })
 
 interface GqlResponse<T> {

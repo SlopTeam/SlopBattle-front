@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  // URL du back en production. Vide en dev : le proxy de vite.config.ts prend le relais
+  // Back URL in production. Empty in dev: the proxy in vite.config.ts takes over
   readonly VITE_API_URL?: string
 }
