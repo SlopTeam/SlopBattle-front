@@ -7,8 +7,8 @@ export type Rarity = (typeof RARITIES)[number]
 export const RARITY_LABELS: Record<Rarity, string> = {
   common: 'Mid',
   uncommon: 'Based',
-  rare: 'Chad',
-  epic: 'Sigma',
+  rare: 'Sigma',
+  epic: 'Chad',
   legendary: 'Ascended',
   goat: 'Goated',
 }

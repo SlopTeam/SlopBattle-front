@@ -50,18 +50,28 @@ const menuOpen = ref(false)
 const profileMenu = useTemplateRef('profileMenu')
 const route = useRoute()
 
+// Close the menu after navigating
 watch(
   () => route.fullPath,
   () => (menuOpen.value = false),
 )
 
+// Clicks elsewhere on the page never reach the toggle button: only a listener on
+// `document` sees them. Clicks inside the profile block (toggle, links) are ignored.
 function onClickOutside(event: MouseEvent) {
   if (!profileMenu.value?.contains(event.target as Node)) menuOpen.value = false
 }
+// Escape closes the menu wherever the focus is
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') menuOpen.value = false
 }
 
+// TODO(a11y): return focus to the toggle on Escape, close on focusout (tabbing away),
+// and drop aria-haspopup (it announces an arrow-key ARIA menu; this is a disclosure).
+// Listening in capture phase would also survive a stopPropagation() elsewhere.
+
+// `document` outlives this component: the listeners must be removed on unmount,
+// otherwise each remount stacks a duplicate pointing to a dead instance (memory leak)
 onMounted(() => {
   document.addEventListener('click', onClickOutside)
   document.addEventListener('keydown', onKeydown)
