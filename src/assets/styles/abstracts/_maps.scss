@@ -48,6 +48,8 @@ $rarities: (
 $colors: (
   'brand': #ff0505,
   'white': #ffffff,
+  // TODO(design): placeholder focus colour. Red is reserved for errors.
+  'focus': #a7f3d0,
   'success-bg': #ecfdf5,
   'success-border': #a7f3d0,
   'success-text': #047857,

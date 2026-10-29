@@ -1,16 +1,24 @@
 <template>
-  <!-- Native <select> laid over the visual label: keyboard and mobile pickers for free -->
-  <span class="filter-select">
-    <span class="filter-select__value" aria-hidden="true">
-      {{ prefix }}{{ selectedLabel }}
-      <img v-if="chevron" :src="chevronIcon" alt="" width="16" height="16" />
+  <label class="filter-select">
+    <span class="filter-select__label">{{ label }}</span>
+    <!-- Native <select> laid over the visual value: keyboard and mobile pickers for free -->
+    <span class="filter-select__field">
+      <span class="filter-select__value" aria-hidden="true">
+        <span
+          class="filter-select__text"
+          :class="{ 'filter-select__text--placeholder': !selectedLabel }"
+        >
+          {{ selectedLabel || placeholder }}
+        </span>
+        <img :src="chevronIcon" alt="" width="16" height="16" />
+      </span>
+      <select v-model="model" class="filter-select__native" :title="selectedLabel">
+        <option v-for="option in options" :key="option.value" :value="option.value">
+          {{ option.label }}
+        </option>
+      </select>
     </span>
-    <select v-model="model" class="filter-select__native" :aria-label="label">
-      <option v-for="option in options" :key="option.value" :value="option.value">
-        {{ option.label }}
-      </option>
-    </select>
-  </span>
+  </label>
 </template>
 
 <script setup lang="ts">
@@ -22,48 +30,76 @@ export interface SelectOption {
   label: string
 }
 
-const props = withDefaults(
-  defineProps<{
-    label: string
-    options: SelectOption[]
-    /** Text shown before the selected label, e.g. « Trier : » */
-    prefix?: string
-    chevron?: boolean
-  }>(),
-  { prefix: '', chevron: false },
-)
+const props = defineProps<{
+  label: string
+  options: SelectOption[]
+  /** Hint shown while no filter is selected */
+  placeholder?: string
+}>()
 
 const model = defineModel<string>({ required: true })
 
-const selectedLabel = computed(
-  () => props.options.find((option) => option.value === model.value)?.label ?? '',
+// The empty-value option means « no filter »: it stays in the list to reset, but the field shows empty
+const selectedLabel = computed(() =>
+  model.value === ''
+    ? ''
+    : (props.options.find((option) => option.value === model.value)?.label ?? ''),
 )
 </script>
 
 <style scoped lang="scss">
 .filter-select {
-  position: relative;
   display: inline-flex;
-  border: 1px solid var(--color-gray-200);
-  border-radius: var(--radius-md);
-  background: var(--color-white);
+  flex-direction: column;
+  gap: 6px;
+  width: 180px;
+  max-width: 100%;
 
-  &:hover {
-    background: var(--color-gray-50);
+  &__label {
+    color: var(--color-gray-500);
+    font-size: 12px;
+    font-weight: var(--font-weight-semibold);
   }
 
-  &:focus-within {
-    @include focus-ring;
+  &__field {
+    position: relative;
+    display: flex;
+    height: 48px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-lg);
+    background: var(--color-white);
+
+    &:hover {
+      background: var(--color-gray-50);
+    }
+
+    &:focus-within {
+      @include focus-ring;
+    }
   }
 
   &__value {
-    display: inline-flex;
+    display: flex;
+    flex: 1;
     align-items: center;
     gap: 8px;
-    padding: 9px 13px;
+    min-width: 0;
+    padding: 0 13px;
     font-size: 13px;
     font-weight: var(--font-weight-semibold);
+  }
+
+  &__text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
+
+    &--placeholder {
+      color: var(--color-gray-400);
+      font-weight: var(--font-weight-regular);
+    }
   }
 
   &__native {

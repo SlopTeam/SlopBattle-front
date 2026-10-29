@@ -13,25 +13,29 @@
         v-model="filters.query"
         class="browser__search"
         label="Rechercher"
-        placeholder="Rechercher une carte, un set ou un type"
+        placeholder="Rechercher une carte, une édition ou un type"
       />
       <div class="browser__filters">
-        <FilterSelect v-model="filters.set" label="Filtrer par set" :options="setOptions" />
-        <FilterSelect v-model="filters.type" label="Filtrer par type" :options="typeOptions" />
+        <FilterSelect
+          v-model="filters.set"
+          label="Édition"
+          placeholder="Choisir une édition"
+          :options="setOptions"
+        />
+        <FilterSelect
+          v-model="filters.type"
+          label="Type"
+          placeholder="Choisir un type"
+          :options="typeOptions"
+        />
         <FilterSelect
           v-model="filters.rarity"
-          label="Filtrer par rareté"
+          label="Rareté"
+          placeholder="Choisir une rareté"
           :options="rarityOptions"
         />
       </div>
-      <FilterSelect
-        v-model="sort"
-        class="browser__sort"
-        label="Trier"
-        prefix="Trier : "
-        chevron
-        :options="sortOptions"
-      />
+      <FilterSelect v-model="sort" class="browser__sort" label="Trier par" :options="sortOptions" />
     </div>
 
     <div class="panel">
@@ -120,7 +124,7 @@ function toOptions(allLabel: string, values: string[]): SelectOption[] {
   return [{ value: '', label: allLabel }, ...values.map((value) => ({ value, label: value }))]
 }
 
-const setOptions = computed(() => toOptions('Tous les sets', sets.value))
+const setOptions = computed(() => toOptions('Toutes les éditions', sets.value))
 const typeOptions = computed(() => toOptions('Tous les types', types.value))
 const rarityOptions: SelectOption[] = [
   { value: '', label: 'Toutes les raretés' },
@@ -187,7 +191,8 @@ const sortOptions: (SelectOption & { value: CardSort })[] = [
   &__controls {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    // Filters carry a label on top: align the fields on their bottom edge
+    align-items: flex-end;
     gap: 16px;
   }
 
