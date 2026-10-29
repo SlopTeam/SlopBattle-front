@@ -1,0 +1,24 @@
+// Interaction states are not designed yet: keep them sober and accessible.
+@mixin focus-ring($offset: 2px) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: $offset;
+}
+
+// Mockups only exist at 1440 px: this only keeps small screens usable
+@mixin small-screen {
+  @media (max-width: 640px) {
+    @content;
+  }
+}
+
+@mixin visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

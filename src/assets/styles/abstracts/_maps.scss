@@ -1,0 +1,84 @@
+// Design tokens as SCSS maps. They are emitted as CSS custom properties in
+// `_tokens.scss` and `_rarity.scss`: components consume the `var(--…)`, not these maps.
+
+// Figma variable collection « Rareté », keyed by dev code (user-facing names in constants/rarity.ts)
+$rarities: (
+  common: (
+    border: #9ca3af,
+    badge-bg: #f3f4f6,
+    badge-text: #4b5563,
+  ),
+  uncommon: (
+    border: #22c55e,
+    badge-bg: #dcfce7,
+    badge-text: #15803d,
+  ),
+  rare: (
+    border: #3b82f6,
+    badge-bg: #dbeafe,
+    badge-text: #1d4ed8,
+  ),
+  epic: (
+    border: #a855f7,
+    badge-bg: #f3e8ff,
+    badge-text: #7e22ce,
+    glow-blur: 16px,
+    glow-alpha: 0.35,
+  ),
+  legendary: (
+    border: #f59e0b,
+    badge-bg: #fef3c7,
+    badge-text: #b45309,
+    glow-blur: 24px,
+    glow-alpha: 0.5,
+  ),
+  goat: (
+    // TODO(design): « Goated » is not designed yet. Placeholder colours, and the
+    // legendary texture until a dedicated one exists.
+    border: #dc2626,
+    badge-bg: #fee2e2,
+    badge-text: #b91c1c,
+    glow-blur: 32px,
+    glow-alpha: 0.6,
+    texture: legendary,
+  ),
+);
+
+// Keys are quoted: unquoted `white` would be parsed as a color, not a name
+$colors: (
+  'brand': #ff0505,
+  'white': #ffffff,
+  // TODO(design): placeholder focus colour. Red is reserved for errors.
+  'focus': #a7f3d0,
+  'success-bg': #ecfdf5,
+  'success-border': #a7f3d0,
+  'success-text': #047857,
+);
+
+$grays: (
+  50: #f9fafb,
+  100: #f3f4f6,
+  200: #e5e7eb,
+  300: #d1d5db,
+  400: #9ca3af,
+  500: #6b7280,
+  600: #4b5563,
+  700: #374151,
+  900: #111827,
+);
+
+$font-weights: (
+  regular: 400,
+  medium: 500,
+  semibold: 600,
+  bold: 700,
+);
+
+$radii: (
+  sm: 6px,
+  md: 10px,
+  lg: 12px,
+  xl: 16px,
+  card: 18px,
+  pill: 999px,
+);

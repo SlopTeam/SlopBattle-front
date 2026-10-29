@@ -1,0 +1,4 @@
+// Injected into every component through `additionalData` (vite.config.ts).
+// Must never output CSS, otherwise it would be duplicated in each component.
+@forward 'maps';
+@forward 'mixins';
