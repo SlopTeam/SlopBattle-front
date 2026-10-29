@@ -20,4 +20,10 @@ export default defineConfig({
       },
     },
   },
+  // In dev, /graphql goes through Vite: same origin, so no CORS to configure on the back
+  server: {
+    proxy: {
+      '/graphql': 'http://localhost:3000',
+    },
+  },
 })
