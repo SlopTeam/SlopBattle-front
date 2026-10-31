@@ -56,18 +56,13 @@ const selectedLabel = computed(() =>
   max-width: 100%;
 
   &__label {
-    color: var(--color-gray-500);
-    font-size: 12px;
-    font-weight: var(--font-weight-semibold);
+    @include field-label;
   }
 
   &__field {
+    @include field-box;
     position: relative;
     display: flex;
-    height: 48px;
-    border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-lg);
-    background: var(--color-white);
 
     &:hover {
       background: var(--color-gray-50);
