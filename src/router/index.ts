@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
 declare module 'vue-router' {
@@ -50,6 +51,18 @@ const router = createRouter({
       component: () => import('@/views/auth/RegisterView.vue'),
       meta: { guestOnly: true },
     },
+    // Return point of the Google sign-in (the token comes in the URL fragment)
+    {
+      path: '/auth/callback',
+      name: 'auth_callback',
+      component: () => import('@/views/auth/AuthCallbackView.vue'),
+    },
+    {
+      path: '/choose-username',
+      name: 'choose_username',
+      component: () => import('@/views/auth/ChooseUsernameView.vue'),
+      meta: { requiresAuth: true },
+    },
     // Account
     {
       path: '/profile',
@@ -82,14 +95,42 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const auth = useAuthStore()
+  // Wait for the session restoration so a reload does not look like a logged-out visit
+  await auth.init()
+
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
+  }
+  if (auth.needsUsername && to.name !== 'choose_username') {
+    return {
+      name: 'choose_username',
+      query: to.fullPath === '/' ? undefined : { redirect: to.fullPath },
+    }
+  }
+  if (to.name === 'choose_username' && auth.isAuthenticated && !auth.needsUsername) {
+    return { name: 'home' }
   }
   if (to.meta.guestOnly && auth.isAuthenticated) {
     return { name: 'home' }
   }
 })
+
+/** Sends the user to the login page when the session ends (token expired) on a page that needs it */
+export function redirectOnSessionExpiry(): void {
+  const auth = useAuthStore()
+  watch(
+    () => auth.sessionExpired,
+    (expired) => {
+      if (!expired) return
+      auth.sessionExpired = false
+      const current = router.currentRoute.value
+      if (current.meta.requiresAuth) {
+        router.replace({ name: 'login', query: { redirect: current.fullPath } })
+      }
+    },
+  )
+}
 
 export default router

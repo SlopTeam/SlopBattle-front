@@ -21,6 +21,11 @@
         :aria-busy="pending"
       />
 
+      <div v-if="$slots.alternatives" class="auth__alternatives">
+        <span class="auth__divider">ou</span>
+        <slot name="alternatives" />
+      </div>
+
       <footer v-if="$slots.footer" class="auth__footer">
         <slot name="footer" />
       </footer>
@@ -100,6 +105,32 @@ const emit = defineEmits<{ submit: [] }>()
 
   &__submit {
     width: 100%;
+  }
+
+  &__alternatives {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    :deep(.button) {
+      width: 100%;
+    }
+  }
+
+  &__divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--color-gray-500);
+    font-size: 13px;
+
+    &::before,
+    &::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--color-gray-200);
+    }
   }
 
   &__footer {

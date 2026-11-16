@@ -30,6 +30,10 @@
       :error="errors.confirmation"
     />
 
+    <template #alternatives>
+      <GoogleButton />
+    </template>
+
     <template #footer>
       <p>
         Déjà un compte ?
@@ -43,12 +47,12 @@
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import AuthForm from '@/components/auth/AuthForm.vue'
+import GoogleButton from '@/components/auth/GoogleButton.vue'
 import TextField from '@/components/ui/TextField.vue'
 import { useAuthRedirect } from '@/composables/useAuthRedirect'
+import { PASSWORD_MIN_LENGTH, USERNAME_MIN_LENGTH } from '@/constants/auth'
 import { AuthError, useAuthStore } from '@/stores/auth'
 
-const USERNAME_MIN_LENGTH = 3
-const PASSWORD_MIN_LENGTH = 8
 // Loose on purpose: the back-end (or a confirmation email) is the real check
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
