@@ -22,15 +22,14 @@
       :error="errors.password"
     />
 
+    <template #alternatives>
+      <GoogleButton />
+    </template>
+
     <template #footer>
       <p>
         Pas encore de compte ?
         <router-link :to="{ name: 'register', query: route.query }">Créer un compte</router-link>
-      </p>
-      <!-- TODO : remove with the mocked back-end -->
-      <p>
-        Compte de démo : <code>{{ DEMO_ACCOUNT.email }}</code> /
-        <code>{{ DEMO_ACCOUNT.password }}</code>
       </p>
     </template>
   </AuthForm>
@@ -40,9 +39,9 @@
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import AuthForm from '@/components/auth/AuthForm.vue'
+import GoogleButton from '@/components/auth/GoogleButton.vue'
 import TextField from '@/components/ui/TextField.vue'
 import { useAuthRedirect } from '@/composables/useAuthRedirect'
-import { DEMO_ACCOUNT } from '@/mocks/users'
 import { AuthError, useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()

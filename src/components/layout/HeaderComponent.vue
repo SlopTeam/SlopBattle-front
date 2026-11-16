@@ -30,7 +30,7 @@
           <img :src="userIcon" alt="" width="20" height="20" />
         </button>
         <ul v-show="menuOpen" id="profile-menu" class="profile__menu">
-          <li class="profile__username">{{ auth.user.username }}</li>
+          <li class="profile__username">{{ auth.user.username ?? auth.user.email }}</li>
           <li><router-link :to="{ name: 'collection_list' }">Ma collection</router-link></li>
           <li><router-link :to="{ name: 'profile' }">Mon compte</router-link></li>
           <li><router-link :to="{ name: 'settings' }">Paramètres</router-link></li>
