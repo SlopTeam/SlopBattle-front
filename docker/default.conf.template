@@ -1,0 +1,38 @@
+# Template rendered at container start by the nginx image (envsubst on /etc/nginx/templates):
+# only ${BACKEND_UPSTREAM} is replaced, nginx variables ($uri, $host…) are left as is.
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+
+    # Back-end address, e.g. http://api:3000 (no trailing slash, no path). Resolved at request
+    # time through Docker's DNS, so nginx starts even when the back-end is not up yet.
+    resolver 127.0.0.11 valid=30s ipv6=off;
+    set $backend "${BACKEND_UPSTREAM}";
+
+    # Back-end routes, served on the front's origin (no CORS): the GraphQL API and the Google
+    # sign-in (/auth/google and /auth/google/callback). /auth/callback stays a front-end route.
+    location ~ ^/(graphql|auth/google)(/|$) {
+        if ($backend = "") {
+            return 503;
+        }
+        proxy_pass $backend;
+        proxy_http_version 1.1;
+        proxy_ssl_server_name on;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+    }
+
+    # Fichiers générés par Vite (nom avec hash) : cache long
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # Routes vue-router (createWebHistory) : renvoyer index.html, jamais mis en cache
+    location / {
+        add_header Cache-Control "no-cache";
+        try_files $uri $uri/ /index.html;
+    }
+}
