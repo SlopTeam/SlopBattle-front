@@ -1,4 +1,4 @@
-import { gql } from '@/api/graphql'
+import { gql } from '@/api/client'
 import type { User } from '@/types/user'
 
 export interface Credentials {
@@ -30,6 +30,8 @@ export async function login(input: Credentials): Promise<string> {
       login(input: $input) { access_token }
     }`,
     { input },
+    // A token left in storage must not be sent: its rejection would read as an expired session
+    { token: null },
   )
   return data.login.access_token
 }
@@ -40,6 +42,7 @@ export async function register(input: Credentials): Promise<string> {
       register(input: $input) { access_token }
     }`,
     { input },
+    { token: null },
   )
   return data.register.access_token
 }
