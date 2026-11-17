@@ -3,6 +3,11 @@
 Source of truth: Figma file `iSsaIbulMhR5hvyXsjc0Ct` (« Sans titre », page **Homepage**).
 Base URL: `https://www.figma.com/design/iSsaIbulMhR5hvyXsjc0Ct/Sans-titre?node-id=<id avec - au lieu de :>`
 
+> **À lire d'abord : [AGENTS.md](../../AGENTS.md) et [docs/agents/ui.md](../agents/ui.md).** Ce handoff a
+> été écrit avant eux. En cas d'écart, ils priment : noms de composants (`HeaderComponent`, `BaseTag`,
+> `BaseButton`), codes de rareté (`common` … `legendary`), événements à la place des props `onX`,
+> commentaires en anglais. Le serveur MCP Figma n'est disponible que si vous vous êtes authentifié.
+
 ## Instructions pour Claude Code
 
 1. Le serveur MCP Figma est connecté. Pour chaque composant ou écran, appelle `get_design_context` sur son node ID (tableau ci-dessous) et `get_screenshot` pour comparer visuellement. Le code renvoyé est une **référence** : adapte-le à la stack et aux conventions du projet. Ne colle pas du code généré tel quel.
