@@ -111,8 +111,8 @@ export async function gql<T>(
     if (options.signal?.aborted) throw error
     throw new ApiError(
       isTimeout(error)
-        ? 'Le serveur met trop de temps à répondre. Réessaie dans un instant.'
-        : 'Impossible de joindre le serveur. Réessaie dans un instant.',
+        ? 'Le serveur met trop de temps à répondre. Réessayez dans un instant.'
+        : 'Impossible de joindre le serveur. Réessayez dans un instant.',
     )
   }
 
@@ -125,7 +125,7 @@ export async function gql<T>(
   if (firstError || !ok || !payload?.data) {
     const error = firstError
       ? toApiError(firstError, res.status)
-      : new ApiError('Une erreur est survenue. Réessaie dans un instant.', { status: res.status })
+      : new ApiError('Une erreur est survenue, réessayez.', { status: res.status })
     // Without a token, a 401 is a refused login, not an expired session
     if (token && error.isUnauthorized) {
       unauthorizedHandler?.()

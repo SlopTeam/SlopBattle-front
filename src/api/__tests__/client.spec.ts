@@ -158,7 +158,7 @@ describe('gql', () => {
     const error = await client.gql('{ a }').catch((e: unknown) => e)
     expect(error).toBeInstanceOf(client.ApiError)
     expect(error).toMatchObject({
-      message: 'Une erreur est survenue. Réessaie dans un instant.',
+      message: 'Une erreur est survenue, réessayez.',
       status: 502,
     })
   })
@@ -173,7 +173,7 @@ describe('gql', () => {
     const error = await client.gql('{ a }').catch((e: unknown) => e)
     expect(error).toBeInstanceOf(client.ApiError)
     expect((error as Error).message).toBe(
-      'Impossible de joindre le serveur. Réessaie dans un instant.',
+      'Impossible de joindre le serveur. Réessayez dans un instant.',
     )
   })
 
@@ -184,7 +184,7 @@ describe('gql', () => {
     const error = await client.gql('{ a }').catch((e: unknown) => e)
     expect(error).toBeInstanceOf(client.ApiError)
     expect((error as Error).message).toBe(
-      'Le serveur met trop de temps à répondre. Réessaie dans un instant.',
+      'Le serveur met trop de temps à répondre. Réessayez dans un instant.',
     )
   })
 
