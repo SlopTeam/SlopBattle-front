@@ -147,6 +147,7 @@ Run every command from the repo root: `vite.config.ts` reads `.env` from `proces
 | One test file            | `npx vitest run src/api/__tests__/client.spec.ts`                                                                                |
 | One test by name         | `npx vitest run -t "part of the it() title"`                                                                                     |
 | Type-check               | `npm run type-check`                                                                                                             |
+| Regenerate API types     | `npm run codegen` (the back must run on `http://localhost:3000`, or set `VITE_API_URL`)                                        |
 | Lint (read-only)         | `npx oxlint .` then `npx eslint .`                                                                                               |
 | Format check (read-only) | `npx prettier --check src/`                                                                                                      |
 | Fix your files only      | `npx prettier --write <files>`, `npx eslint --fix <files>`, `npx oxlint --fix <files>`                                           |
@@ -216,6 +217,7 @@ src/
   api/                    network layer and API → UI adapters: no Vue, no store
     client.ts             THE client: gql(), ApiError, apiUrl(), setUnauthorizedHandler()
     token.ts              JWT in localStorage ('slop-battle:access-token'), the only accessor
+    generated/graphql.ts  types written by `npm run codegen` (committed, never edited)
     auth.ts cards.ts categories.ts cardTypes.ts   one module per back-end resource
     adapters.ts           (to create) API shapes → UI types, pure functions
   assets/
@@ -389,10 +391,13 @@ Full reference, with the back's schema, errors and gaps: [docs/agents/api.md](do
 - `ApiError` carries `message`, `code`, `status` and `isUnauthorized`. Branch on `status` (401, 404,
   409), not on `code`: Nest sends 404 and 409 as `INTERNAL_SERVER_ERROR`. A missing `card(id)` is not a
   404: it arrives with `status` 200 and an English message.
-- Wire types live in their `src/api/*.ts` module. UI types live in `src/types/` (decision).
+- Wire types come from the codegen (`src/api/generated/graphql.ts`) and are re-exported by their
+  `src/api/*.ts` module. UI types live in `src/types/` (decision).
   Conversions go in `src/api/adapters.ts`: pure `to<UiType>()` functions (`toCard`), tested in
   `src/api/__tests__/adapters.spec.ts` (decision). Never convert in a component.
-- Types are hand-written. There is no GraphQL codegen yet: it is planned in Jira as SCRUM-62.
+- Types come from the GraphQL codegen: run `npm run codegen` (back running) after you add or change a
+  document, and commit `src/api/generated/graphql.ts`. Never edit that file. See
+  [docs/agents/api.md](docs/agents/api.md#codegen).
 - Client env variables must be declared in `env.d.ts`: `strictImportMetaEnv` makes any other
   `import.meta.env.X` a type error.
 

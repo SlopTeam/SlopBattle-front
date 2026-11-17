@@ -1,67 +1,71 @@
 import { gql } from '@/api/client'
+import type {
+  GetMyProfileQuery,
+  LoginMutation,
+  LoginMutationVariables,
+  RegisterMutation,
+  RegisterMutationVariables,
+  UpdateMyProfileMutation,
+  UpdateMyProfileMutationVariables,
+} from '@/api/generated/graphql'
 import type { User } from '@/types/user'
 
-export interface Credentials {
-  email: string
-  password: string
-}
+const LOGIN = /* GraphQL */ `
+  mutation Login($input: LoginInput!) {
+    login(input: $input) {
+      access_token
+    }
+  }
+`
 
-/** Fields of the back-end `UpdateUserProfileInput` */
-export interface UpdateProfileInput {
-  username?: string
-}
+const REGISTER = /* GraphQL */ `
+  mutation Register($input: RegisterInput!) {
+    register(input: $input) {
+      access_token
+    }
+  }
+`
 
-interface TokenResponse {
-  access_token: string
-}
+const GET_MY_PROFILE = /* GraphQL */ `
+  query GetMyProfile {
+    myProfile {
+      id
+      email
+      username
+      avatarUrl
+      coins
+      createdAt
+    }
+  }
+`
 
-// `id` may come as a GraphQL ID (string), so it is normalized by `toUser`
-type RawUser = Omit<User, 'id'> & { id: number | string }
+const UPDATE_MY_PROFILE = /* GraphQL */ `
+  mutation UpdateMyProfile($input: UpdateUserProfileInput!) {
+    updateMyProfile(input: $input) {
+      id
+    }
+  }
+`
 
-function toUser(raw: RawUser): User {
-  return { ...raw, id: Number(raw.id) }
-}
-
-const PROFILE_FIELDS = 'id email username avatarUrl coins createdAt'
-
-export async function login(input: Credentials): Promise<string> {
-  const data = await gql<{ login: TokenResponse }>(
-    `mutation Login($input: LoginInput!) {
-      login(input: $input) { access_token }
-    }`,
-    { input },
-    // A token left in storage must not be sent: its rejection would read as an expired session
-    { token: null },
-  )
+export async function login(input: LoginMutationVariables['input']): Promise<string> {
+  // A token left in storage must not be sent: its rejection would read as an expired session
+  const data = await gql<LoginMutation>(LOGIN, { input }, { token: null })
   return data.login.access_token
 }
 
-export async function register(input: Credentials): Promise<string> {
-  const data = await gql<{ register: TokenResponse }>(
-    `mutation Register($input: RegisterInput!) {
-      register(input: $input) { access_token }
-    }`,
-    { input },
-    { token: null },
-  )
+export async function register(input: RegisterMutationVariables['input']): Promise<string> {
+  const data = await gql<RegisterMutation>(REGISTER, { input }, { token: null })
   return data.register.access_token
 }
 
 /** Profile of the owner of the token; `token` overrides the stored one (Google callback) */
 export async function fetchMyProfile(token?: string): Promise<User> {
-  const data = await gql<{ myProfile: RawUser }>(
-    `query { myProfile { ${PROFILE_FIELDS} } }`,
-    undefined,
-    { token },
-  )
-  return toUser(data.myProfile)
+  const data = await gql<GetMyProfileQuery>(GET_MY_PROFILE, undefined, { token })
+  return data.myProfile
 }
 
-export async function updateMyProfile(input: UpdateProfileInput): Promise<void> {
-  await gql(
-    `mutation UpdateMyProfile($input: UpdateUserProfileInput!) {
-      updateMyProfile(input: $input) { id }
-    }`,
-    { input },
-  )
+export async function updateMyProfile(
+  input: UpdateMyProfileMutationVariables['input'],
+): Promise<void> {
+  await gql<UpdateMyProfileMutation>(UPDATE_MY_PROFILE, { input })
 }

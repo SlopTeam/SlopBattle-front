@@ -1,19 +1,14 @@
 import { gql } from './client'
-import type { Category } from './categories'
-import type { CardType } from './cardTypes'
+import type {
+  CardFieldsFragment,
+  GetCardQuery,
+  GetCardQueryVariables,
+  GetCardsQuery,
+  GetCardsQueryVariables,
+} from './generated/graphql'
 
 /** Card as returned by the back (Card entity of SlopBattle-back) */
-export interface Card {
-  id: string // GraphQL always serializes an ID as a string
-  title: string
-  description: string | null
-  imageUrl: string
-  rarityId: number
-  categories: Category[]
-  types: CardType[]
-  createdAt: string // ISO date
-  updatedAt: string
-}
+export type Card = CardFieldsFragment
 
 const CARD_FIELDS = /* GraphQL */ `
   fragment CardFields on Card {
@@ -43,10 +38,10 @@ export interface CardsFilter {
 }
 
 export const getCards = (filter?: CardsFilter) =>
-  gql<{ cards: Card[] }>(
+  gql<GetCardsQuery>(
     /* GraphQL */ `
       ${CARD_FIELDS}
-      query ($filter: CardsFilterInput) {
+      query GetCards($filter: CardsFilterInput) {
         cards(filter: $filter) {
           ...CardFields
         }
@@ -59,18 +54,18 @@ export const getCards = (filter?: CardsFilter) =>
         categoryIds: filter.categoryIds?.map(Number),
         typeIds: filter.typeIds?.map(Number),
       },
-    },
+    } satisfies GetCardsQueryVariables,
   ).then((d) => d.cards)
 
 export const getCard = (id: string) =>
-  gql<{ card: Card }>(
+  gql<GetCardQuery>(
     /* GraphQL */ `
       ${CARD_FIELDS}
-      query ($id: ID!) {
+      query GetCard($id: ID!) {
         card(id: $id) {
           ...CardFields
         }
       }
     `,
-    { id },
+    { id } satisfies GetCardQueryVariables,
   ).then((d) => d.card)

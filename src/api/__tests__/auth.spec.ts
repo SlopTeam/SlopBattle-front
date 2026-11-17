@@ -33,8 +33,8 @@ describe('login / register', () => {
 })
 
 describe('fetchMyProfile', () => {
-  it('uses the given token (Google callback) and turns the GraphQL id into a number', async () => {
-    gql.mockResolvedValueOnce({ myProfile: { id: '4', email: 'max@test.fr', username: 'Max' } })
+  it('uses the given token (Google callback)', async () => {
+    gql.mockResolvedValueOnce({ myProfile: { id: 4, email: 'max@test.fr', username: 'Max' } })
     await expect(fetchMyProfile('jwt-google')).resolves.toMatchObject({ id: 4, username: 'Max' })
     expect(gql.mock.lastCall?.[2]).toEqual({ token: 'jwt-google' })
   })
