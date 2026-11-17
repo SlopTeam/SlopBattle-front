@@ -167,8 +167,8 @@ Run every command from the repo root: `vite.config.ts` reads `.env` from `proces
 
 ### Local setup
 
-1. **Front:** `npm ci`, then `cp .env.example .env`. Leave `VITE_BACKEND_URL` **empty**: the browser
-   calls `/graphql` on the front's own origin and Vite proxies it.
+1. **Front:** `npm ci`, then `cp .env.example .env`. The browser always calls `/graphql` on the
+   front's own origin, and Vite proxies it to the back.
 2. **Back:** in `../SlopBattle-back`, on `develop`:
    1. Copy `.env.example` to `.env` and fill it:
       - `DB_*`;
@@ -199,8 +199,8 @@ Run every command from the repo root: `vite.config.ts` reads `.env` from `proces
 
    See [docs/agents/api.md](docs/agents/api.md#mutations).
 
-`VITE_API_URL` and `VITE_API_BASE_URL` no longer exist. Vite prints a warning while they are still in
-your `.env`. Delete them.
+`VITE_API_URL`, `VITE_API_BASE_URL` and `VITE_BACKEND_URL` no longer exist. Vite prints a warning
+while one of them has a value in your `.env`. Delete them.
 
 ## Definition of done
 

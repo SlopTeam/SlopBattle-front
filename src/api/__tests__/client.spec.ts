@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { setToken } from '@/api/token'
 
 type Client = typeof import('@/api/client')
@@ -24,9 +24,8 @@ vi.mock('axios', () => ({
   },
 }))
 
-/** Fresh client module for a given VITE_BACKEND_URL, so the local .env never leaks into the tests */
-async function loadClient(backendUrl = ''): Promise<Client> {
-  vi.stubEnv('VITE_BACKEND_URL', backendUrl)
+/** Fresh client module, so the unauthorized handler never leaks between tests */
+async function loadClient(): Promise<Client> {
   vi.resetModules()
   return import('@/api/client')
 }
@@ -64,23 +63,14 @@ beforeEach(async () => {
   client = await loadClient()
 })
 
-afterEach(() => {
-  vi.unstubAllEnvs()
-})
-
 describe('http instance', () => {
   it('calls /graphql on the same origin by default', async () => {
     respond({ data: { hello: 'world' } })
     await client.gql('{ hello }', { a: 1 })
 
-    expect(lastCreation()?.baseURL).toBe('')
+    expect(lastCreation()?.baseURL).toBeUndefined()
     expect(post.mock.lastCall?.[0]).toBe('/graphql')
     expect(post.mock.lastCall?.[1]).toEqual({ query: '{ hello }', variables: { a: 1 } })
-  })
-
-  it('targets VITE_BACKEND_URL when set, without doubling the slash', async () => {
-    client = await loadClient('https://api.test/')
-    expect(lastCreation()?.baseURL).toBe('https://api.test')
   })
 
   it('lets every HTTP status through, so GraphQL errors sent with a 400 can be read', () => {
@@ -265,38 +255,7 @@ describe('unauthorized handler', () => {
 })
 
 describe('apiUrl', () => {
-  it('stays on the same origin by default', () => {
+  it('stays on the same origin', () => {
     expect(client.apiUrl('/auth/google')).toBe('/auth/google')
-  })
-
-  it('prefixes VITE_BACKEND_URL, without doubling the slash', async () => {
-    client = await loadClient('https://api.test/')
-    expect(client.apiUrl('/auth/google')).toBe('https://api.test/auth/google')
-  })
-
-  it('drops a /graphql copied from the former VITE_API_URL, and warns in dev', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    vi.stubEnv('DEV', true)
-    try {
-      for (const value of ['http://localhost:3000/graphql', 'http://localhost:3000/graphql/']) {
-        client = await loadClient(value)
-        expect(client.apiUrl('/auth/google')).toBe('http://localhost:3000/auth/google')
-        expect(lastCreation()?.baseURL).toBe('http://localhost:3000')
-      }
-      expect(warn).toHaveBeenCalledTimes(2)
-    } finally {
-      warn.mockRestore()
-    }
-  })
-
-  it('keeps a root that merely contains "graphql", without warning', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    try {
-      client = await loadClient('https://graphql.example.com/api')
-      expect(client.apiUrl('/auth/google')).toBe('https://graphql.example.com/api/auth/google')
-      expect(warn).not.toHaveBeenCalled()
-    } finally {
-      warn.mockRestore()
-    }
   })
 })

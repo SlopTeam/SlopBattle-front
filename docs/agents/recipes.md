@@ -435,8 +435,7 @@ When the back has no API for a screen yet (boosters today):
 ## Test a component that needs the router or a store
 
 Copy `src/views/auth/__tests__/AuthCallbackView.spec.ts`. Stub the store actions the component calls:
-otherwise they send real requests, to the `VITE_BACKEND_URL` of your local `.env`, or to
-`http://localhost:3000` (the origin Vitest's jsdom uses) when it is empty.
+otherwise they send real requests to `http://localhost:3000/graphql` (jsdom's origin in Vitest).
 
 ```ts
 function setup() {
@@ -471,13 +470,14 @@ To test a store, auto-mock the API module: `vi.mock('@/api/auth')`, then
 
 ## Test code that depends on an env variable
 
-Vitest loads your local `.env`. To control a value, stub it and reload the module:
+Vitest loads your local `.env`. To control a value, stub it and reload the module that reads it
+(`VITE_FEATURE_FLAG` and `@/config` are placeholders: there is no client variable today):
 
 ```ts
-async function loadClient(backendUrl = '') {
-  vi.stubEnv('VITE_BACKEND_URL', backendUrl)
+async function loadConfig(value = '') {
+  vi.stubEnv('VITE_FEATURE_FLAG', value)
   vi.resetModules()
-  return import('@/api/client')
+  return import('@/config')
 }
 afterEach(() => vi.unstubAllEnvs())
 ```

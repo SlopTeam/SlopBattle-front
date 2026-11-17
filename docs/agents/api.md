@@ -8,7 +8,7 @@ It is the only module that talks HTTP. The axios instance (`http`) is private.
 
 ```ts
 gql<T>(query: string, variables?: Record<string, unknown>, options?: GqlOptions): Promise<T>
-apiUrl(path: string): string          // `<VITE_BACKEND_URL><path>`: '/auth/google' when it is empty
+apiUrl(path: string): string          // the path as is: the back is on the front's origin
 class ApiError extends Error {        // new ApiError(message, { code?, status? })
   code?: string; status?: number; get isUnauthorized(): boolean
 }
@@ -18,12 +18,11 @@ interface GqlOptions { token?: string | null; signal?: AbortSignal }
 
 ### URLs
 
-- `VITE_BACKEND_URL` is the **back root URL**, without `/graphql`. It is empty by default.
-  - It is read at **build time**. Trailing slashes are removed, and so is a `/graphql` suffix copied
-    from the former `VITE_API_URL` (with a warning in dev).
-  - Empty means **same origin**: the browser calls `/graphql` and `/auth/google` on the front's origin.
-- `gql()` POSTs `{ query, variables }` to `<root>/graphql`. `apiUrl('/auth/google')` returns
-  `<root>/auth/google`.
+- The browser always calls the back on the **front's own origin** (decision A2): `gql()` POSTs
+  `{ query, variables }` to `/graphql`, and `apiUrl('/auth/google')` returns `/auth/google`. There is
+  no env variable for the back's URL: a proxy forwards those paths.
+- Navigate to a back route with `apiUrl()`, not a hard-coded string, so that the rule stays in one
+  place.
 - Who forwards those paths to the back:
 
   | Environment             | Forwarder                              | Target                                                                                                            |
@@ -31,8 +30,8 @@ interface GqlOptions { token?: string | null; signal?: AbortSignal }
   | Dev                     | Vite proxy (`vite.config.ts`)          | `API_PROXY_TARGET`, default `http://localhost:3000`                                                               |
   | Docker / staging / prod | nginx (`docker/default.conf.template`) | `BACKEND_UPSTREAM`, set in the Portainer stack, e.g. `http://api:3000`. Empty, or without `http(s)://`, means 503 |
 
-- Both forwarders normalize their target the same way as the client: trailing slashes and a
-  `/graphql` suffix are dropped, then the request path and query string are appended. A path
+- Both forwarders normalize their target the same way: trailing slashes and a `/graphql` suffix are
+  dropped, then the request path and query string are appended. A path
   prefix such as `https://host/api` is kept.
 - Which paths are forwarded:
   - Vite matches its proxy keys **by prefix**, so `/graphql-explorer` would be proxied in dev;
@@ -41,13 +40,7 @@ interface GqlOptions { token?: string | null; signal?: AbortSignal }
   - `/auth/google` also covers `/auth/google/callback`;
   - `/auth/callback` is **not** proxied, because it is a front route.
   - Never add `/auth` as a whole to a proxy.
-- Deployed builds keep `VITE_BACKEND_URL` empty (decision A2): the Docker image has no build argument
-  for it, and the back's address is `BACKEND_UPSTREAM`. Set it only for a local setup without the
-  proxy: the calls become cross-origin, and the back must list the front's origin in its `CORS_ORIGINS`.
-- The warnings for a stripped `/graphql` come from two places:
-  - for `API_PROXY_TARGET`, Vite warns in the terminal;
-  - for `VITE_BACKEND_URL`, the app warns in the browser console, in dev only. A production build
-    strips it silently.
+- When `API_PROXY_TARGET` ends with `/graphql`, Vite strips it and warns in the terminal.
 - Error pages: nginx answers 503 (empty `BACKEND_UPSTREAM`) or 502 (back down) with its own HTML page.
   A JSON error page comes from the back itself.
 

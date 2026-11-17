@@ -4,8 +4,9 @@ import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
-// Replaced by VITE_BACKEND_URL and API_PROXY_TARGET: warn instead of ignoring them silently
-const LEGACY_ENV = ['VITE_API_URL', 'VITE_API_BASE_URL']
+// No longer read: the browser always calls the back on the front's origin, and the proxy targets
+// API_PROXY_TARGET. Warn instead of ignoring them silently
+const LEGACY_ENV = ['VITE_API_URL', 'VITE_API_BASE_URL', 'VITE_BACKEND_URL']
 
 /** Back-end root, without a trailing slash nor /graphql: the proxy appends the request path to it */
 function toProxyTarget(url: string): string {
@@ -23,7 +24,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   for (const name of LEGACY_ENV.filter((key) => env[key])) {
     console.warn(
-      `${name} is no longer read: see VITE_BACKEND_URL and API_PROXY_TARGET in .env.example`,
+      `${name} is no longer read: the back is proxied, see API_PROXY_TARGET in .env.example`,
     )
   }
   const apiTarget = toProxyTarget(env.API_PROXY_TARGET || 'http://localhost:3000')

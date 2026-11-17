@@ -12,7 +12,7 @@ commands, the local setup with the back, and the git and PR rules. Details are i
 ```sh
 nvm install            # Node 24, from .nvmrc (installs it if missing, then uses it)
 npm ci
-cp .env.example .env   # leave VITE_BACKEND_URL empty: Vite proxies the back
+cp .env.example .env   # Vite proxies the back: set API_PROXY_TARGET if it isn't on :3000
 npm run dev            # http://localhost:5173, the back expected on http://localhost:3000
 ```
 
