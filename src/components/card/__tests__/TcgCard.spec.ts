@@ -17,7 +17,7 @@ describe('TcgCard', () => {
   it('exposes its rarity for the CSS rarity variables', () => {
     const wrapper = mount(TcgCard, { props })
     expect(wrapper.attributes('data-rarity')).toBe('epic')
-    expect(wrapper.find('.rarity-badge').text()).toBe('Sigma')
+    expect(wrapper.find('.rarity-badge').text()).toBe('Chad')
   })
 
   it('renders the card content', () => {

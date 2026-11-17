@@ -1,7 +1,7 @@
 <template>
   <CardBrowser
     title="Liste des cartes"
-    subtitle="Gérez votre collection, filtrez et exportez vos cartes."
+    subtitle="Découvrez toutes les cartes du jeu et filtrez-les par édition, type ou rareté."
     :cards="catalogueCards"
   />
 </template>

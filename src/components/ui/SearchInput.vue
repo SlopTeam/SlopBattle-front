@@ -16,14 +16,11 @@ const model = defineModel<string>({ required: true })
 
 <style scoped lang="scss">
 .search {
+  @include field-box;
   display: flex;
   align-items: center;
   gap: 12px;
-  height: 48px;
   padding: 0 15px;
-  border: 1px solid var(--color-gray-200);
-  border-radius: var(--radius-lg);
-  background: var(--color-white);
   cursor: text;
 
   &:focus-within {

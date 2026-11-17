@@ -1,7 +1,21 @@
 // Interaction states are not designed yet: keep them sober and accessible.
 @mixin focus-ring($offset: 2px) {
-  outline: 2px solid var(--color-brand);
+  outline: 2px solid var(--color-focus);
   outline-offset: $offset;
+}
+
+// Form fields (search, filters, text inputs) share the same label and box
+@mixin field-label {
+  color: var(--color-gray-500);
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+}
+
+@mixin field-box {
+  height: 48px;
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  background: var(--color-white);
 }
 
 // Mockups only exist at 1440 px: this only keeps small screens usable

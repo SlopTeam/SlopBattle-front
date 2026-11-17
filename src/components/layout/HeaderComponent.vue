@@ -17,7 +17,7 @@
         size="sm"
       />
 
-      <div ref="profileMenu" class="profile">
+      <div v-if="auth.user" ref="profileMenu" class="profile">
         <button
           type="button"
           class="profile__toggle"
@@ -30,38 +30,61 @@
           <img :src="userIcon" alt="" width="20" height="20" />
         </button>
         <ul v-show="menuOpen" id="profile-menu" class="profile__menu">
+          <li class="profile__username">{{ auth.user.username ?? auth.user.email }}</li>
           <li><router-link :to="{ name: 'collection_list' }">Ma collection</router-link></li>
           <li><router-link :to="{ name: 'profile' }">Mon compte</router-link></li>
           <li><router-link :to="{ name: 'settings' }">Paramètres</router-link></li>
+          <li><button type="button" @click="logout">Se déconnecter</button></li>
         </ul>
       </div>
+      <BaseButton v-else :to="{ name: 'login' }" label="Se connecter" size="sm" />
     </nav>
   </header>
 </template>
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import BaseButton from '@/components/ui/BaseButton.vue'
+import { useAuthStore } from '@/stores/auth'
 import walletCardsIcon from '@/assets/icons/wallet-cards.svg'
 import userIcon from '@/assets/icons/user.svg'
 
 const menuOpen = ref(false)
 const profileMenu = useTemplateRef('profileMenu')
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
 
+// Home rather than staying put: the current page may require auth
+function logout() {
+  auth.logout()
+  menuOpen.value = false
+  router.push({ name: 'home' })
+}
+
+// Close the menu after navigating
 watch(
   () => route.fullPath,
   () => (menuOpen.value = false),
 )
 
+// Clicks elsewhere on the page never reach the toggle button: only a listener on
+// `document` sees them. Clicks inside the profile block (toggle, links) are ignored.
 function onClickOutside(event: MouseEvent) {
   if (!profileMenu.value?.contains(event.target as Node)) menuOpen.value = false
 }
+// Escape closes the menu wherever the focus is
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') menuOpen.value = false
 }
 
+// TODO(a11y): return focus to the toggle on Escape, close on focusout (tabbing away),
+// and drop aria-haspopup (it announces an arrow-key ARIA menu; this is a disclosure).
+// Listening in capture phase would also survive a stopPropagation() elsewhere.
+
+// `document` outlives this component: the listeners must be removed on unmount,
+// otherwise each remount stacks a duplicate pointing to a dead instance (memory leak)
 onMounted(() => {
   document.addEventListener('click', onClickOutside)
   document.addEventListener('keydown', onKeydown)
@@ -164,20 +187,35 @@ onBeforeUnmount(() => {
     box-shadow: 0 8px 24px -4px rgb(17 24 39 / 12%);
     list-style: none;
 
-    a {
+    a,
+    button {
       display: block;
+      width: 100%;
       padding: 8px 10px;
+      border: 0;
       border-radius: var(--radius-sm);
+      background: none;
       color: var(--color-gray-900);
       font-size: 13px;
       font-weight: var(--font-weight-medium);
+      text-align: left;
       text-decoration: none;
+      cursor: pointer;
 
       &:hover,
       &.router-link-active {
         background: var(--color-gray-100);
       }
     }
+  }
+
+  &__username {
+    margin-bottom: 4px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--color-gray-200);
+    color: var(--color-gray-500);
+    font-size: 12px;
+    font-weight: var(--font-weight-semibold);
   }
 }
 </style>

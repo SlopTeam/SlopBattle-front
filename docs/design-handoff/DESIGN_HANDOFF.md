@@ -3,6 +3,11 @@
 Source of truth: Figma file `iSsaIbulMhR5hvyXsjc0Ct` (« Sans titre », page **Homepage**).
 Base URL: `https://www.figma.com/design/iSsaIbulMhR5hvyXsjc0Ct/Sans-titre?node-id=<id avec - au lieu de :>`
 
+> **À lire d'abord : [AGENTS.md](../../AGENTS.md) et [docs/agents/ui.md](../agents/ui.md).** Ce handoff a
+> été écrit avant eux. En cas d'écart, ils priment : noms de composants (`HeaderComponent`, `BaseTag`,
+> `BaseButton`), codes de rareté (`common` … `legendary`), événements à la place des props `onX`,
+> commentaires en anglais. Le serveur MCP Figma n'est disponible que si vous vous êtes authentifié.
+
 ## Instructions pour Claude Code
 
 1. Le serveur MCP Figma est connecté. Pour chaque composant ou écran, appelle `get_design_context` sur son node ID (tableau ci-dessous) et `get_screenshot` pour comparer visuellement. Le code renvoyé est une **référence** : adapte-le à la stack et aux conventions du projet. Ne colle pas du code généré tel quel.
@@ -40,8 +45,8 @@ Collection de variables « Rareté » (une variable par rareté, à exposer en C
 |---|---|---|---|---|---|---|
 | `mid` | Mid | common | `#9CA3AF` | `#F3F4F6` | `#4B5563` | — |
 | `based` | Based | uncommon | `#22C55E` | `#DCFCE7` | `#15803D` | — |
-| `chad` | Chad | rare | `#3B82F6` | `#DBEAFE` | `#1D4ED8` | — |
-| `sigma` | Sigma | epic | `#A855F7` | `#F3E8FF` | `#7E22CE` | `0 0 16px` border @ 35 % |
+| `sigma` | Sigma | rare | `#3B82F6` | `#DBEAFE` | `#1D4ED8` | — |
+| `chad` | Chad | epic | `#A855F7` | `#F3E8FF` | `#7E22CE` | `0 0 16px` border @ 35 % |
 | `ascended` | Ascended | legendary | `#F59E0B` | `#FEF3C7` | `#B45309` | `0 0 24px` border @ 50 % |
 
 Conseil : une seule règle `.card[data-rarity="…"]` qui fixe `--rarity-border`, `--rarity-badge-bg`, `--rarity-badge-text`, `--rarity-texture`, plutôt que 5 composants.

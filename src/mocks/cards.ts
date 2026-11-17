@@ -26,6 +26,7 @@ function card(
   }
 }
 
+// TODO : remove mockup data for "real" data
 const DRAGON =
   'Un dragon ancestral né des coulées de lave. Ses flammes réduisent en cendres tout ce qui croise son chemin.'
 
