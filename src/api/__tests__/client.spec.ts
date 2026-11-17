@@ -273,4 +273,30 @@ describe('apiUrl', () => {
     client = await loadClient('https://api.test/')
     expect(client.apiUrl('/auth/google')).toBe('https://api.test/auth/google')
   })
+
+  it('drops a /graphql copied from the former VITE_API_URL, and warns in dev', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.stubEnv('DEV', true)
+    try {
+      for (const value of ['http://localhost:3000/graphql', 'http://localhost:3000/graphql/']) {
+        client = await loadClient(value)
+        expect(client.apiUrl('/auth/google')).toBe('http://localhost:3000/auth/google')
+        expect(lastCreation()?.baseURL).toBe('http://localhost:3000')
+      }
+      expect(warn).toHaveBeenCalledTimes(2)
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it('keeps a root that merely contains "graphql", without warning', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      client = await loadClient('https://graphql.example.com/api')
+      expect(client.apiUrl('/auth/google')).toBe('https://graphql.example.com/api/auth/google')
+      expect(warn).not.toHaveBeenCalled()
+    } finally {
+      warn.mockRestore()
+    }
+  })
 })

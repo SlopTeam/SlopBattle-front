@@ -1,8 +1,22 @@
 import axios, { type AxiosResponse } from 'axios'
 import { getToken } from '@/api/token'
 
-/** Back-end root URL, without a trailing slash. Empty: same origin (Vite proxy in dev, reverse proxy in production) */
-const API_URL = (import.meta.env.VITE_BACKEND_URL ?? '').replace(/\/+$/, '')
+/**
+ * Back-end root URL, without a trailing slash nor /graphql: each caller appends its own route
+ * (/graphql for gql, /auth/google for the Google sign-in).
+ * Empty: same origin (Vite proxy in dev, reverse proxy in production).
+ */
+const API_URL = toBackendRoot(import.meta.env.VITE_BACKEND_URL)
+
+// The former VITE_API_URL held the GraphQL endpoint; a value copied from it must not turn the
+// Google sign-in into …/graphql/auth/google
+function toBackendRoot(url = ''): string {
+  const root = url.replace(/\/+$/, '').replace(/\/graphql$/, '')
+  if (import.meta.env.DEV && root !== url.replace(/\/+$/, '')) {
+    console.warn(`VITE_BACKEND_URL must be the back-end root, without /graphql: using "${root}"`)
+  }
+  return root
+}
 
 /** Absolute URL of a back-end route, for full page navigations such as the Google sign-in */
 export function apiUrl(path: string): string {
