@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import * as authApi from '@/api/auth'
-import { ApiError } from '@/api/graphql'
+import { ApiError } from '@/api/client'
 import { getToken, setToken } from '@/api/token'
 import { AuthError, useAuthStore } from '@/stores/auth'
 import type { User } from '@/types/user'
@@ -80,7 +80,13 @@ describe('useAuthStore', () => {
   })
 
   it('maps an email already in use to a readable message', async () => {
-    vi.mocked(authApi.register).mockRejectedValue(new ApiError('Email already exists'))
+    // Shape sent by the back: ConflictException, mapped by the client from originalError
+    vi.mocked(authApi.register).mockRejectedValue(
+      new ApiError('Cette adresse e-mail est déjà utilisée', {
+        code: 'INTERNAL_SERVER_ERROR',
+        status: 409,
+      }),
+    )
 
     const auth = useAuthStore()
     const register = auth.register({ username: 'Max', email: 'max@test.fr', password: 'password1' })

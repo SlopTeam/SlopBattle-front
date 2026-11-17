@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import * as authApi from '@/api/auth'
-import { ApiError, setUnauthorizedHandler } from '@/api/graphql'
+import { ApiError, setUnauthorizedHandler } from '@/api/client'
 import { clearToken, getToken, setToken } from '@/api/token'
 import type { User } from '@/types/user'
 

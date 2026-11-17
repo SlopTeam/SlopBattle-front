@@ -1,0 +1,49 @@
+# Template rendered at container start by the nginx image (envsubst on /etc/nginx/templates):
+# only the environment variables (BACKEND_UPSTREAM, NGINX_LOCAL_RESOLVERS) are replaced, nginx
+# variables ($uri, $host…) are left as is. The result is included in the http block.
+
+# Back-end root taken from BACKEND_UPSTREAM, e.g. http://api:3000. A trailing slash or a /graphql
+# suffix (the former VITE_API_URL) is dropped: a path there would replace the path of every proxied
+# request and send the Google sign-in to /graphql. A value without http(s):// gives "", hence 503.
+map "${BACKEND_UPSTREAM}" $backend {
+    "~^(?<backend_root>https?://.+?)(?:/graphql)?/*$" $backend_root;
+    default "";
+}
+
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+
+    # The back-end name is resolved at request time, so nginx starts even when the back-end is not
+    # up yet. Resolvers come from the container's /etc/resolv.conf (Docker's 127.0.0.11 on a compose
+    # network, the host's DNS on the default bridge), set by NGINX_ENTRYPOINT_LOCAL_RESOLVERS.
+    resolver ${NGINX_LOCAL_RESOLVERS} valid=30s ipv6=off;
+
+    # Back-end routes, served on the front's origin (no CORS): the GraphQL API and the Google
+    # sign-in (/auth/google and /auth/google/callback). /auth/callback stays a front-end route.
+    location ~ ^/(graphql|auth/google)(/|$) {
+        if ($backend = "") {
+            return 503;
+        }
+        # Original path and query string (the OAuth code) appended to the back-end root
+        proxy_pass $backend$request_uri;
+        proxy_http_version 1.1;
+        proxy_ssl_server_name on;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+    }
+
+    # Fichiers générés par Vite (nom avec hash) : cache long
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # Routes vue-router (createWebHistory) : renvoyer index.html, jamais mis en cache
+    location / {
+        add_header Cache-Control "no-cache";
+        try_files $uri $uri/ /index.html;
+    }
+}
