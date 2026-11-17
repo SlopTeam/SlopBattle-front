@@ -1,73 +1,38 @@
-# .
+# Slop Battle: front
 
-SLOP BATTLE
+Web front of Slop Battle, the meme trading-card game of the SlopTeam (Ynov YDays). Vue 3 + Vite +
+TypeScript + Pinia, talking to the NestJS GraphQL back (SlopBattle-back).
 
-## Recommended IDE Setup
+**Contributors and AI agents: read [AGENTS.md](AGENTS.md) first.** It holds the conventions, the
+commands, the local setup with the back, and the git and PR rules. Details are in
+[docs/agents/](docs/agents/).
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
-
-## Recommended Browser Setup
-
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
-
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
+## Quick start
 
 ```sh
-npm install
+nvm use                # Node 24, from .nvmrc
+npm ci
+cp .env.example .env   # leave VITE_BACKEND_URL empty: Vite proxies the back
+npm run dev            # http://localhost:5173, the back expected on http://localhost:3000
 ```
 
-### Compile and Hot-Reload for Development
+Running the back locally is covered in [AGENTS.md › Local setup](AGENTS.md#local-setup).
+
+## Checks
+
+The same checks as CI, none of which modifies files:
 
 ```sh
-npm run dev
+npx oxlint . && npx eslint . && npm run type-check && npx vitest run && npm run build-only
+npx prettier --check src/
 ```
 
-### Type-Check, Compile and Minify for Production
+`npm run lint` and `npm run format` rewrite the whole repo: run them only on purpose.
 
-```sh
-npm run build
-```
+## Recommended setup
 
-### Run Unit Tests with [Vitest](https://vitest.dev/)
-
-```sh
-npm run test:unit
-```
-
-### Run End-to-End Tests with [Playwright](https://playwright.dev)
-
-```sh
-# Install browsers for the first run
-npx playwright install
-
-# When testing on CI, must build the project first
-npm run build
-
-# Runs the end-to-end tests
-npm run test:e2e
-# Runs the tests only on Chromium
-npm run test:e2e -- --project=chromium
-# Runs the tests of a specific file
-npm run test:e2e -- tests/example.spec.ts
-# Runs the tests in debug mode
-npm run test:e2e -- --debug
-```
-
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-npm run lint
-```
+- **Editor:** [VS Code](https://code.visualstudio.com/) +
+  [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar). Disable Vetur.
+- **Browser:** Vue.js devtools for
+  [Chromium](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
+  or [Firefox](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/).
