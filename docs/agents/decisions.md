@@ -3,7 +3,8 @@
 Why the rules in [AGENTS.md](../../AGENTS.md) exist. The rule for open cases is in
 [AGENTS.md › Decide or ask](../../AGENTS.md#decide-or-ask):
 
-- follow the nearest existing file for code structure and style;
+- follow the most similar existing file for code structure and style that the docs don't cover (the
+  decisions below win over older code);
 - ask for product, design, copy and back-end questions, starting with the [Unknowns](#unknowns-ask-dont-guess).
 
 ## Architecture decisions
@@ -23,42 +24,42 @@ Why the rules in [AGENTS.md](../../AGENTS.md) exist. The rule for open cases is 
 These were settled where the code was inconsistent or silent. Older code may still follow the other
 variant. Don't rewrite it just for that.
 
-| Topic                  | Rule                                                                                      | The other variant you will see                                                                   |
-| ---------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| UI tone                | Vouvoiement                                                                               | Tutoiement in the client's error messages on `develop` before SCRUM-54. None after it            |
-| Language               | UI in French. Code, comments, commits and docs in English. PR titles and bodies in French | French comments in `Dockerfile`, `ci.yml`, nginx; `DESIGN_HANDOFF.md` is French                  |
-| Generic error          | `Une erreur est survenue, réessayez.`                                                     | —                                                                                                |
-| Full sentences         | End with a period                                                                         | the system views (`ComingSoonView`, `MaintenanceView`, `NotFoundView`)                           |
-| Imports                | Always `@/…`                                                                              | `./App.vue` and `./router` in `main.ts`; `./client`, `./categories`, `./cardTypes` in `src/api/` |
-| JSDoc                  | One line on every new exported function                                                   | `gql`, `token.ts`, `login`, `register`, `getCards`… have none                                    |
-| Query function names   | `get*`                                                                                    | `fetchMyProfile`                                                                                 |
-| GraphQL documents      | `/* GraphQL */` tag + an operation name                                                   | anonymous `query (…)` in `cards.ts`, `categories.ts`, `cardTypes.ts`; untagged in `auth.ts`      |
-| API function style     | New modules: arrow functions with `.then((d) => d.x)`. In an existing module, match it    | `async function` in `auth.ts`                                                                    |
-| API → UI conversion    | `to<UiType>()` in `src/api/adapters.ts`                                                   | —                                                                                                |
-| New atoms              | `Base` prefix in `components/ui/`                                                         | `TextField`, `SearchInput`, `FilterSelect`                                                       |
-| Events                 | camelCase in `defineEmits`, kebab-case listeners; never callback props                    | `onBuy` / `onFreeOpen` props in `DESIGN_HANDOFF.md`                                              |
-| BEM root block         | The kebab-case component name without `Base` and without `View`                           | `.card` (TcgCard), `.browser`, `.auth`                                                           |
-| Self-closing           | Components with no slot content                                                           | `<router-view></router-view>` in `App.vue`                                                       |
-| TODO format            | `TODO(<scope>): English text`                                                             | `TODO : …` (French HTML comments in 3 views, an English `//` comment in `src/mocks/cards.ts`)    |
-| `catch` variable       | `error`                                                                                   | `e`                                                                                              |
-| Vitest imports         | Alphabetical                                                                              | `{ describe, it, expect, vi }`                                                                   |
-| Product name in the UI | "Slop Battle"                                                                             | "Slop battle", "SlopBattle"                                                                      |
-| Comment spelling       | American English (`color`)                                                                | `colour` in 3 comments                                                                           |
-| Node                   | 24 (`.nvmrc`), as in CI and the Dockerfile                                                | local Node 26 works thanks to the vitest flag                                                    |
+| Topic                  | Rule                                                                                                                                                  | The other variant you will see                                                                                                                        |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| UI tone                | Vouvoiement                                                                                                                                           | Tutoiement in the client's error messages on `develop` before SCRUM-54. None after it                                                                 |
+| Language               | UI in French. Code, comments, branch commits and docs in English. PR titles and bodies in French: the PR title becomes the squash commit on `develop` | French comments in `Dockerfile`, `ci.yml`, nginx; `DESIGN_HANDOFF.md` is French                                                                       |
+| Generic error          | `Une erreur est survenue, réessayez.`                                                                                                                 | —                                                                                                                                                     |
+| Full sentences         | End with a period                                                                                                                                     | the system views (`ComingSoonView`, `MaintenanceView`, `NotFoundView`)                                                                                |
+| Imports                | Always `@/…`                                                                                                                                          | `./App.vue` and `./router` in `main.ts`; `./client`, `./categories`, `./cardTypes` in `src/api/`                                                      |
+| JSDoc                  | One line on every new exported function                                                                                                               | `gql`, `token.ts`, `login`, `register`, `getCards`… have none                                                                                         |
+| Query function names   | `get*`                                                                                                                                                | `fetchMyProfile`                                                                                                                                      |
+| GraphQL documents      | `/* GraphQL */` tag + an operation name                                                                                                               | anonymous documents in `cards.ts` (`query (…)`), `categories.ts` and `cardTypes.ts` (`{ … }`) and `fetchMyProfile`; untagged in `auth.ts`             |
+| API function style     | New modules: arrow functions with `.then((d) => d.x)`. In an existing module, match it                                                                | `async function` in `auth.ts`                                                                                                                         |
+| API → UI conversion    | `to<UiType>()` in `src/api/adapters.ts`                                                                                                               | —                                                                                                                                                     |
+| New atoms              | `Base` prefix in `components/ui/`                                                                                                                     | `TextField`, `SearchInput`, `FilterSelect`, `RarityBadge`, `RarityIcon`                                                                               |
+| Events                 | camelCase in `defineEmits`, kebab-case listeners; never callback props                                                                                | `onBuy` / `onFreeOpen` props in `DESIGN_HANDOFF.md`                                                                                                   |
+| BEM root block         | The kebab-case component name without `Base` and without `View`                                                                                       | `.card` (TcgCard), `.browser` (CardBrowser), `.auth` (AuthForm), `.search` (SearchInput), `.header` (HeaderComponent), `.callback` (AuthCallbackView) |
+| Self-closing           | Components with no slot content                                                                                                                       | `<router-view></router-view>` in `App.vue`                                                                                                            |
+| TODO format            | `TODO(<scope>): English text`                                                                                                                         | `TODO : …` (French HTML comments in 3 views, an English `//` comment in `src/mocks/cards.ts`), `ponytail:` in `useApi.ts`                             |
+| `catch` variable       | `error`                                                                                                                                               | `e`                                                                                                                                                   |
+| Vitest imports         | Alphabetical                                                                                                                                          | `{ describe, it, expect, vi }`                                                                                                                        |
+| Product name in the UI | "Slop Battle"                                                                                                                                         | "Slop battle", "SlopBattle"                                                                                                                           |
+| Comment spelling       | American English (`color`)                                                                                                                            | `colour` in 3 comments                                                                                                                                |
+| Node                   | 24 (`.nvmrc`), as in CI and the Dockerfile                                                                                                            | local Node 26 works thanks to the vitest flag                                                                                                         |
 
 ## Process decisions
 
-| Topic             | Rule                                                                                        | History                                                                          |
-| ----------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| Branch names      | `<type>/SCRUM-<n>-<kebab-slug>`                                                             | `feat/api_client`, `feat/scrum28_Catalogue`, `feat-76-…`                         |
-| Commits           | `:gitmoji: \| Imperative English subject`, using the code list in AGENTS.md                 | free text (`added comment`) and conventional (`feat(76): …`)                     |
-| Agents and git    | Commit, push or open a PR only when the human asks. Never merge or approve                  | —                                                                                |
-| PR base           | `develop`, always                                                                           | 4 of the first 6 PRs went to `main`, because `main` is the GitHub default branch |
-| PR title/body     | `<Unicode emoji> SCRUM-<n> : <résumé>`, French body from the PR template                    | the first 6 PRs had empty bodies                                                 |
-| Jira keys         | Always the full key `SCRUM-<n>`: GitHub for Jira only links full keys                       | `76`, `scrum28`                                                                  |
-| Updating a branch | Rebase on `origin/develop`, then `--force-with-lease` on your own branch                    | merging `main` into the branch                                                   |
-| Merges            | Squash, by a human, after a teammate's review. The PR title becomes the commit on `develop` | merge commits and squashes mixed; 3 of 6 PRs merged without review               |
-| AI attribution    | Keep whatever trailer your tool adds (`Co-Authored-By: …`). Never fake human authorship     | —                                                                                |
+| Topic             | Rule                                                                                                                                                               | History                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| Branch names      | `<type>/SCRUM-<n>-<kebab-slug>`                                                                                                                                    | `feat/api_client`, `feat/scrum28_Catalogue`, `feat-76-…`                         |
+| Commits           | `:gitmoji: \| Imperative English subject`, using the code list in AGENTS.md                                                                                        | free text (`added comment`) and conventional (`feat(76): …`)                     |
+| Agents and git    | Commit, push or open a PR only when the human asks. Never merge or approve                                                                                         | —                                                                                |
+| PR base           | `develop`, always                                                                                                                                                  | 4 of the first 6 PRs went to `main`, because `main` is the GitHub default branch |
+| PR title/body     | `<Unicode emoji> SCRUM-<n> : <résumé>`, French body from the PR template                                                                                           | the first 6 PRs had empty bodies                                                 |
+| Jira keys         | Always the full key `SCRUM-<n>`: GitHub for Jira only links full keys                                                                                              | `76`, `scrum28`                                                                  |
+| Updating a branch | Rebase on `origin/develop`, then `--force-with-lease` on your own branch                                                                                           | merging `main` into the branch                                                   |
+| Merges            | Squash, by a human, after a teammate's review. The merger sets the squash commit title to the PR title (for a one-commit PR, GitHub prefills the commit's subject) | merge commits and squashes mixed; 3 of 6 PRs merged without review               |
+| AI attribution    | Keep whatever trailer your tool adds (`Co-Authored-By: …`). Never fake human authorship                                                                            | —                                                                                |
 
 ## Known gaps
 
@@ -93,6 +94,12 @@ Don't be surprised by these. Don't fix them inside an unrelated change: fixing o
 
   See [ui.md](ui.md#rarities).
 
+- **Auth errors**: `toAuthError` (`src/stores/auth.ts`) maps only the 401 of `login` and the 409 of
+  `register`. Every other `ApiError` keeps its raw message, which can be English ("Unauthorized",
+  "email must be an email") or say "nom d'utilisateur". `AuthError` has no `status`, so a form can't
+  branch on it.
+- **Account deletion**: `deleteMyAccount` fails while the user owns cards (no delete cascade on
+  `user_cards`).
 - **Validation**: the existing forms don't check the 30-character pseudo maximum, and their e-mail
   checks are looser than the back's, so the back's English messages can reach the UI. New forms
   validate the full rules.
@@ -118,12 +125,18 @@ assumption in one place.
 
 ## Unknowns: ask, don't guess
 
-- The rarity contract (B2), and whether `goat` stays (booster rates in the handoff have 5 rarities).
-- Which category, if any, is a card's set (B8).
+- The rarity contract (B2), what an unknown `rarityId` does, and whether `goat` stays (the handoff's
+  « Rareté » table has 5 rarities).
+- Which category, if any, is a card's set (B8), and what `set` is while there is none.
 - What a logged-out visitor sees on the public catalogue while B1 is open.
 - How copy counts are shown in Ma collection: no Figma node shows them.
 - Boosters: how buying works, prices, the free booster's cooldown. No back API exists yet.
 - The economy (SlopCOIN, `coins` on the profile): the rules are not specified.
-- Avatars: the back never fills `avatarUrl` today, and there is no placeholder image.
+- Avatars: the back never fills `avatarUrl` today, and there is no placeholder image or alt text.
+- A card with an empty or broken `imageUrl`.
+- An empty catalogue (no cards at all): no wording yet.
+- An end-to-end test strategy: a real back in CI (secrets, seed) or Playwright `page.route` mocks.
+- Who owns what outside the repo (Portainer stack, back env, Google console): ask the human who to
+  contact.
 - Responsive layouts beyond "usable at ≤ 640px".
 - Any screen, color, size, state or wording that Figma and the request don't specify.

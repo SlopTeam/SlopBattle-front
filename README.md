@@ -10,7 +10,7 @@ commands, the local setup with the back, and the git and PR rules. Details are i
 ## Quick start
 
 ```sh
-nvm use                # Node 24, from .nvmrc
+nvm install            # Node 24, from .nvmrc (installs it if missing, then uses it)
 npm ci
 cp .env.example .env   # leave VITE_BACKEND_URL empty: Vite proxies the back
 npm run dev            # http://localhost:5173, the back expected on http://localhost:3000
@@ -20,14 +20,16 @@ Running the back locally is covered in [AGENTS.md › Local setup](AGENTS.md#loc
 
 ## Checks
 
-The same checks as CI, none of which modifies files:
+The checks every change must pass. The first line is what CI runs; CI doesn't run Prettier. None of
+them rewrites source files (`build-only` writes `dist/`):
 
 ```sh
 npx oxlint . && npx eslint . && npm run type-check && npx vitest run && npm run build-only
 npx prettier --check src/
 ```
 
-`npm run lint` and `npm run format` rewrite the whole repo: run them only on purpose.
+`npm run lint` rewrites fixable files across the whole repo and `npm run format` every file in `src/`:
+run them only on purpose.
 
 ## Recommended setup
 

@@ -34,7 +34,10 @@ interface GqlOptions { token?: string | null; signal?: AbortSignal }
 - Both forwarders normalize their target the same way as the client: trailing slashes and a
   `/graphql` suffix are dropped, then the request path and query string are appended. A path
   prefix such as `https://host/api` is kept.
-- Proxy keys match **by prefix**:
+- Which paths are forwarded:
+  - Vite matches its proxy keys **by prefix**, so `/graphql-explorer` would be proxied in dev;
+  - nginx matches `^/(graphql|auth/google)(/|$)`, so it forwards `/graphql/…` but not
+    `/graphql-explorer`. Never create a front route that starts with either path;
   - `/auth/google` also covers `/auth/google/callback`;
   - `/auth/callback` is **not** proxied, because it is a front route.
   - Never add `/auth` as a whole to a proxy.
@@ -61,7 +64,9 @@ interface GqlOptions { token?: string | null; signal?: AbortSignal }
 - Browser storage keys always start with `slop-battle:`.
 - Pass `{ token: null }` on `login`: otherwise a stale stored token is sent, and the 401 fires the
   unauthorized handler, which logs the user out. `register` passes it too, as a precaution (the back
-  answers it with 409 or 400, never 401). Every other call keeps the default.
+  answers it with 409 or 400, never 401). Every other call keeps the default, except
+  `fetchMyProfile(token)` in the store's `startSession`, which sends the new token explicitly because
+  it is stored only after the back accepts it.
 
 ### Errors
 
@@ -106,7 +111,9 @@ So:
 
   **Never show `ApiError.message` as is.** Map the cases you expect to French messages and fall back
   to `Une erreur est survenue, réessayez.`:
-  - in the auth store, `toAuthError` does it;
+  - in the auth store, `toAuthError` does it only partly: it maps the 401 of `login` and the 409 of
+    `register`, but passes every other `ApiError` message through unchanged (see
+    [Auth flows](#auth-flows-srcstoresauthts-srcrouterindexts)). Don't copy that fallback;
   - for data a view loads, do it in the request function passed to `useApi` (see
     [recipes.md › Show back-end data in a view](recipes.md#show-back-end-data-in-a-view)).
 
@@ -119,9 +126,11 @@ import { gql } from '@/api/client'
 
 /** One owned card, as returned by `myCardCollection`: card details come from `getCards` */
 export interface CollectionEntry {
-  cardId: string // GraphQL always serializes an ID as a string
+  /** GraphQL always serializes an ID as a string */
+  cardId: string
   quantity: number
-  firstObtainedAt: string // ISO date
+  /** ISO timestamp */
+  firstObtainedAt: string
 }
 
 /** Cards owned by the logged-in user (the back requires a token) */
@@ -138,7 +147,7 @@ export const getMyCardCollection = () =>
     }
   `).then((d) => d.myCardCollection.cards)
 
-/** Adds one copy of each card to the collection of the logged-in user */
+/** Adds one copy of each card to the collection of the logged-in user (the back requires a token) */
 export const addCardsInCollection = (cardIds: string[]) =>
   gql<{ addCardsInCollection: { id: string; quantity: number }[] }>(
     /* GraphQL */ `
@@ -155,8 +164,8 @@ export const addCardsInCollection = (cardIds: string[]) =>
 ```
 
 `src/api/cards.ts` shows how to declare and spread a fragment (`CARD_FIELDS`, spread as
-`...CardFields`). Don't copy the rest of it: its queries are anonymous, its exports have no JSDoc, and it
-imports `./client`.
+`...CardFields`). Don't copy the rest of it: its queries are anonymous, `getCards` and `getCard` have
+no JSDoc, and it imports `./client`, `./categories` and `./cardTypes` with relative paths.
 
 Rules:
 
@@ -187,6 +196,22 @@ Rules:
 `collection.ts` (the template above) and `adapters.ts` don't exist yet: create them when a task needs
 them.
 
+## Composables
+
+| Composable           | Signature                                              | Notes                                                                                                                                        |
+| -------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useApi.ts`          | `useApi(request)` → `{ data, error, loading, reload }` | runs on setup, no cancellation (see [Fetching data in a view](#fetching-data-in-a-view))                                                     |
+| `useAuthRedirect.ts` | `useAuthRedirect()` → `redirectAfterAuth(fallback?)`   | also exports `rememberRedirect(value)` and `takeRememberedRedirect()` (the Google round trip, in `sessionStorage`)                           |
+| `useCardFilters.ts`  | `useCardFilters(cards, pageSize = 12)`                 | search, set/type/rarity filters, sort, pages, on UI `Card`s, client-side. Used by `CardBrowser`. Exports the types `CardFilters`, `CardSort` |
+| `useGridColumns.ts`  | `useGridColumns(target, initial = 4)` → `Ref<number>`  | counts the grid's columns with a `ResizeObserver`, so pages fill whole rows                                                                  |
+
+## Wiring CardBrowser to the back
+
+To wire the catalogue or Ma collection, load the full list once (`getCards()` without a filter),
+convert it with the adapters and pass it to `CardBrowser`, which filters, sorts and pages on the
+client. Don't map `CardBrowser`'s filters to `CardsFilterInput`: they use names and rarity codes, the
+back uses ids. If `imageUrl` is empty, ask what to show: `card-placeholder.jpg` is a mock asset.
+
 ## Back-end schema (back `develop`, read-only reference)
 
 The schema is code-first and lives in memory: there is no `.graphql` file in the back repo.
@@ -195,22 +220,22 @@ The schema is code-first and lives in memory: there is no `.graphql` file in the
   in production (the back's comment names staging and Apollo Sandbox).
 - The playground runs only with `NODE_ENV=development`.
 - With a local back, read a type's real fields before you write a document:
-  `curl -s http://localhost:3000/graphql -H 'Content-Type: application/json' -d '{"query":"{ __type(name: \"Card\") { fields { name type { kind name ofType { kind name } } } } }"}'`.
+  `curl -s http://localhost:3000/graphql -H 'Content-Type: application/json' -d '{"query":"{ __type(name: \"Card\") { fields { name type { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } }"}'`.
 - When in doubt, ask a human or read the back's resolvers. Never guess a field.
 
 ### Queries
 
-| Operation                         | Returns                                                                                                 | Auth |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------- | ---- |
-| `myProfile`                       | `UserProfileModel { id: Int!, email, username?, avatarUrl?, coins: Int!, createdAt }`                   | JWT  |
-| `me`                              | `CurrentUserModel { id: Int!, email }` (unused)                                                         | JWT  |
-| `users(limit = 20, offset = 0)`   | `[PublicUserModel]` (a profile without email; limit is clamped to 1..100)                               | JWT  |
-| `user(id: Int!)`                  | `PublicUserModel`                                                                                       | JWT  |
-| `cards(filter: CardsFilterInput)` | `[Card]`                                                                                                | JWT  |
-| `card(id: ID!)`                   | `Card`                                                                                                  | JWT  |
-| `categories`, `category(id: ID!)` | `CategoryEntity { id, name, createdAt, updatedAt }`                                                     | JWT  |
-| `cardTypes`, `cardType(id: ID!)`  | `CardTypeEntity { id, name, createdAt, updatedAt }`                                                     | JWT  |
-| `myCardCollection`                | `CardCollection { userId, cards: [CollectionCard { cardId: ID!, quantity: Float!, firstObtainedAt }] }` | JWT  |
+| Operation                         | Returns                                                                                                      | Auth |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---- |
+| `myProfile`                       | `UserProfileModel { id: Int!, email, username?, avatarUrl?, coins: Int!, createdAt }`                        | JWT  |
+| `me`                              | `CurrentUserModel { id: Int!, email }` (unused)                                                              | JWT  |
+| `users(limit = 20, offset = 0)`   | `[PublicUserModel]` (a profile without email; limit is clamped to 1..100)                                    | JWT  |
+| `user(id: Int!)`                  | `PublicUserModel`                                                                                            | JWT  |
+| `cards(filter: CardsFilterInput)` | `[Card]`                                                                                                     | JWT  |
+| `card(id: ID!)`                   | `Card`                                                                                                       | JWT  |
+| `categories`, `category(id: ID!)` | `CategoryEntity { id, name, createdAt, updatedAt }`                                                          | JWT  |
+| `cardTypes`, `cardType(id: ID!)`  | `CardTypeEntity { id, name, createdAt, updatedAt }`                                                          | JWT  |
+| `myCardCollection`                | `CardCollection { userId: ID!, cards: [CollectionCard { cardId: ID!, quantity: Float!, firstObtainedAt }] }` | JWT  |
 
 Field details:
 
@@ -229,7 +254,7 @@ Field details:
 | `register(input: RegisterInput!)` → `AuthPayload { access_token }`               | `{ email (IsEmail), password (min 8) }`                                      | public              |
 | `login(input: LoginInput!)` → `AuthPayload`                                      | `{ email (IsEmail), password }`                                              | public              |
 | `updateMyProfile(input: UpdateUserProfileInput!)` → `UserProfileModel`           | `{ username? (3–30), avatarUrl? (http(s), ≤ 2048) }`                         | JWT                 |
-| `deleteMyAccount` → `Boolean`                                                    |                                                                              | JWT                 |
+| `deleteMyAccount` → `Boolean`                                                    | fails (English `INTERNAL_SERVER_ERROR`) when the user owns cards             | JWT                 |
 | `addCardsInCollection(input: UpdateUserCardsInput!)` → `[UserCardsEntity]`       | `{ cardIds: [Int!]! }`, +1 copy per id                                       | JWT                 |
 | `removeCardsFromCollection(input: UpdateUserCardsInput!)`                        | `{ cardIds: [Int!]! }`, −1 copy per id; ids the user doesn't own are ignored | JWT                 |
 | `createCard`, `updateCard`, `removeCard`, the same for `Category` and `CardType` | admin, back-office                                                           | **none** (back gap) |
@@ -239,12 +264,21 @@ Notes:
 - `register` fails with 409 when the e-mail is taken. `login` fails with 401 "Identifiants invalides".
   An account that only signs in with Google also gets 401 on `login`.
 - `updateMyProfile` fails with 409 when the username is taken.
-- `add/removeCardsInCollection` return `UserCardsEntity` rows, in input order:
+- Both collection mutations return `UserCardsEntity` rows:
+  - `addCardsInCollection` returns one row per input id, in input order;
+  - `removeCardsFromCollection` returns only the rows that still exist: it skips ids the user doesn't
+    own, and leaves out a row whose last copy it removed (it never returns `quantity` 0). Never match
+    its result to `cardIds` by index;
   - `id` is the **collection row's** id, not the card id;
   - `quantity` is the new count;
   - select only `id` and `quantity`: the `card` relation is not populated by the back.
 
-  An unknown card id fails on a database constraint, with an English `INTERNAL_SERVER_ERROR`.
+  In `addCardsInCollection`, an unknown card id fails on a database constraint with an English
+  `INTERNAL_SERVER_ERROR`, and the ids before it in the same call stay saved.
+  `removeCardsFromCollection` ignores an unknown id.
+
+- `deleteMyAccount` fails while the user owns cards: the `user_cards` foreign key has no delete
+  cascade.
 
 - The admin mutations exist so that the back office can manage the catalogue. In this front, use them
   only to create local test data, never in app code.
@@ -280,9 +314,15 @@ produced by the store's private `toAuthError`:
 - in `login`, a 401 becomes "Email ou mot de passe incorrect.";
 - in `register`, a 409 (or a message matching `/exist|already/i`) becomes "Un compte existe déjà avec
   cet email.";
-- every other `ApiError` becomes an `AuthError` with the back's message unchanged. For example, a taken
-  pseudo in `setUsername` shows the back's "Ce nom d'utilisateur est déjà utilisé", and a refused token
-  in `loginWithToken` shows "Unauthorized".
+- every other `ApiError` becomes an `AuthError` with its message unchanged: the back's message, or the
+  client's French message for a timeout, a network failure or a non-GraphQL response. For example, a
+  taken pseudo in `setUsername` shows the back's "Ce nom d'utilisateur est déjà utilisé", and a
+  refused token in `loginWithToken` shows "Unauthorized" (or "Jeton invalide" when the token's user no
+  longer exists).
+
+`AuthError` has no `status`. A new form that calls a store action can't branch on 409: validate
+locally what you can (3–30 characters for a pseudo), and map the messages you know. This is a known
+gap (see [decisions.md › Known gaps](decisions.md#known-gaps)).
 
 `setUsername(username)` also works after registration: it trims the pseudo, calls `updateMyProfile`,
 then reloads `user`.
@@ -309,13 +349,14 @@ session is kept and the guard sends the user to `/choose-username`.
 4. A new Google user has no username, so the guard sends them to `choose_username`.
 
 Back-side errors in that flow never reach the front. They end on a JSON page at
-`/auth/google/callback` (request B4):
+`/auth/google/callback` (request B4). When someone reports one, ask for the URL and the JSON body:
 
-| JSON on `/auth/google/callback`                                   | Cause                                           |
-| ----------------------------------------------------------------- | ----------------------------------------------- |
-| 401 `Unauthorized`                                                | consent refused on Google's screen              |
-| 401 `Google doit fournir une adresse e-mail vérifiée`             | Google account without a verified e-mail        |
-| 409 `Cette adresse e-mail est déjà liée à un autre compte Google` | e-mail already linked to another Google account |
+| JSON on `/auth/google/callback`                                   | Cause                                                                   |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| 401 `Unauthorized`                                                | consent refused on Google's screen                                      |
+| 401 `Google doit fournir une adresse e-mail vérifiée`             | Google account without a verified e-mail                                |
+| 409 `Cette adresse e-mail est déjà liée à un autre compte Google` | e-mail already linked to another Google account                         |
+| 500 `Internal server error`                                       | back config, e.g. `FRONT_URL` missing or a failed Google token exchange |
 
 When the hash has no `access_token`, `AuthCallbackView` shows "La connexion avec Google a échoué." with a
 link back to login. Google in staging also needs config outside the repo:
