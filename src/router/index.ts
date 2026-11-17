@@ -100,6 +100,10 @@ router.beforeEach(async (to) => {
   // Wait for the session restoration so a reload does not look like a logged-out visit
   await auth.init()
 
+  // The Google return reads its token first, then redirects through these rules with the new
+  // session. Redirecting it earlier would copy the token into a ?redirect= query.
+  if (to.name === 'auth_callback') return
+
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
