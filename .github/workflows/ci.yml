@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD front
 
 on:
   push:
@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   ci:
+    name: front - lint + build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,6 +25,7 @@ jobs:
       - run: npm run build-only
 
   image:
+    name: front - image Docker
     needs: ci
     runs-on: ubuntu-latest
     permissions:
@@ -55,20 +57,29 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy-staging:
+  deploy:
+    name: front - déploiement ${{ github.ref == 'refs/heads/main' && 'prod' || 'staging' }}
     needs: image
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-    runs-on: [self-hosted, staging]
-    concurrency: staging
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+    # runner GitHub : plus de runner self-hosted, Portainer est joint via portainer.nalator.com (protégé par Cloudflare Access)
+    runs-on: ubuntu-latest
+    concurrency: front-${{ github.ref == 'refs/heads/main' && 'prod' || 'staging' }}
     steps:
-      - name: Redeploy stack Portainer (staging)
+      - name: Redéployer la stack Portainer front (${{ github.ref == 'refs/heads/main' && 'prod' || 'staging' }})
         env:
           PORTAINER_URL: ${{ secrets.PORTAINER_URL }}
           PORTAINER_API_KEY: ${{ secrets.PORTAINER_API_KEY }}
-          STACK_ID: ${{ vars.STAGING_STACK_ID }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          STACK_ID: ${{ github.ref == 'refs/heads/main' && vars.PROD_STACK_ID || vars.STAGING_STACK_ID }}
         run: |
           # Relit la stack telle qu'elle est dans Portainer (compose + variables), puis la redéploie en re-téléchargeant l'image
-          api() { curl -fsSk -H "X-API-Key: $PORTAINER_API_KEY" "$@"; }
+          api() {
+            curl -fsS --retry 3 \
+              -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+              -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+              -H "X-API-Key: $PORTAINER_API_KEY" "$@"
+          }
           STACK=$(api "$PORTAINER_URL/api/stacks/$STACK_ID")
           ENDPOINT=$(echo "$STACK" | jq -r .EndpointId)
           FILE=$(api "$PORTAINER_URL/api/stacks/$STACK_ID/file" | jq -r .StackFileContent)
@@ -76,27 +87,4 @@ jobs:
             '{stackFileContent: $f, env: $env, prune: true, pullImage: true}' \
             | api -X PUT -H "Content-Type: application/json" -d @- \
               "$PORTAINER_URL/api/stacks/$STACK_ID?endpointId=$ENDPOINT" > /dev/null
-          echo "Stack $STACK_ID redéployée"
-
-  deploy-prod:
-    needs: image
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, staging]
-    concurrency: prod
-    steps:
-      - name: Redeploy stack Portainer (prod)
-        env:
-          PORTAINER_URL: ${{ secrets.PORTAINER_URL }}
-          PORTAINER_API_KEY: ${{ secrets.PORTAINER_API_KEY }}
-          STACK_ID: ${{ vars.PROD_STACK_ID }}
-        run: |
-          # Relit la stack telle qu'elle est dans Portainer (compose + variables), puis la redéploie en re-téléchargeant l'image
-          api() { curl -fsSk -H "X-API-Key: $PORTAINER_API_KEY" "$@"; }
-          STACK=$(api "$PORTAINER_URL/api/stacks/$STACK_ID")
-          ENDPOINT=$(echo "$STACK" | jq -r .EndpointId)
-          FILE=$(api "$PORTAINER_URL/api/stacks/$STACK_ID/file" | jq -r .StackFileContent)
-          jq -n --arg f "$FILE" --argjson env "$(echo "$STACK" | jq '.Env // []')" \
-            '{stackFileContent: $f, env: $env, prune: true, pullImage: true}' \
-            | api -X PUT -H "Content-Type: application/json" -d @- \
-              "$PORTAINER_URL/api/stacks/$STACK_ID?endpointId=$ENDPOINT" > /dev/null
-          echo "Stack $STACK_ID redéployée"
+          echo "Stack front $STACK_ID redéployée"
