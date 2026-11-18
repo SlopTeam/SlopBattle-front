@@ -1,13 +1,11 @@
 import { gql } from './client'
+import type { GetCardTypesQuery } from './generated/graphql'
 
-export interface CardType {
-  id: string
-  name: string
-}
+export type CardType = GetCardTypesQuery['cardTypes'][number]
 
 export const getCardTypes = () =>
-  gql<{ cardTypes: CardType[] }>(/* GraphQL */ `
-    {
+  gql<GetCardTypesQuery>(/* GraphQL */ `
+    query GetCardTypes {
       cardTypes {
         id
         name

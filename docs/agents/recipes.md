@@ -68,17 +68,17 @@ exist yet.
 
    ```ts
    import { gql } from '@/api/client'
+   import type {
+     AddCardsInCollectionMutation,
+     GetMyCardCollectionQuery,
+   } from '@/api/generated/graphql'
 
    /** One owned card, as returned by `myCardCollection`: card details come from `getCards` */
-   export interface CollectionEntry {
-     cardId: string // GraphQL always serializes an ID as a string
-     quantity: number
-     firstObtainedAt: string // ISO date
-   }
+   export type CollectionEntry = GetMyCardCollectionQuery['myCardCollection']['cards'][number]
 
    /** Cards owned by the logged-in user (the back requires a token) */
    export const getMyCardCollection = () =>
-     gql<{ myCardCollection: { cards: CollectionEntry[] } }>(/* GraphQL */ `
+     gql<GetMyCardCollectionQuery>(/* GraphQL */ `
        query GetMyCardCollection {
          myCardCollection {
            cards {
@@ -92,7 +92,7 @@ exist yet.
 
    /** Adds one copy of each card to the collection of the logged-in user (the back requires a token) */
    export const addCardsInCollection = (cardIds: string[]) =>
-     gql<{ addCardsInCollection: { id: string; quantity: number }[] }>(
+     gql<AddCardsInCollectionMutation>(
        /* GraphQL */ `
          mutation AddCardsInCollection($input: UpdateUserCardsInput!) {
            addCardsInCollection(input: $input) {
@@ -105,6 +105,9 @@ exist yet.
        { input: { cardIds: cardIds.map(Number) } },
      ).then((d) => d.addCardsInCollection)
    ```
+
+   Then run `npm run codegen` (the back must run) to write the `…Query` and `…Mutation` types the
+   template imports, and commit `src/api/generated/graphql.ts`.
 
 3. Test it in `src/api/__tests__/collection.spec.ts`. Mock `@/api/client`, then check what is returned
    and the variables sent:

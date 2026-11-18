@@ -1,13 +1,11 @@
 import { gql } from './client'
+import type { GetCategoriesQuery } from './generated/graphql'
 
-export interface Category {
-  id: string
-  name: string
-}
+export type Category = GetCategoriesQuery['categories'][number]
 
 export const getCategories = () =>
-  gql<{ categories: Category[] }>(/* GraphQL */ `
-    {
+  gql<GetCategoriesQuery>(/* GraphQL */ `
+    query GetCategories {
       categories {
         id
         name

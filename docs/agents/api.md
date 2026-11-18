@@ -116,17 +116,17 @@ Use one file per back resource. The target style for a new module:
 
 ```ts
 import { gql } from '@/api/client'
+import type {
+  AddCardsInCollectionMutation,
+  GetMyCardCollectionQuery,
+} from '@/api/generated/graphql'
 
 /** One owned card, as returned by `myCardCollection`: card details come from `getCards` */
-export interface CollectionEntry {
-  cardId: string // GraphQL always serializes an ID as a string
-  quantity: number
-  firstObtainedAt: string // ISO date
-}
+export type CollectionEntry = GetMyCardCollectionQuery['myCardCollection']['cards'][number]
 
 /** Cards owned by the logged-in user (the back requires a token) */
 export const getMyCardCollection = () =>
-  gql<{ myCardCollection: { cards: CollectionEntry[] } }>(/* GraphQL */ `
+  gql<GetMyCardCollectionQuery>(/* GraphQL */ `
     query GetMyCardCollection {
       myCardCollection {
         cards {
@@ -140,7 +140,7 @@ export const getMyCardCollection = () =>
 
 /** Adds one copy of each card to the collection of the logged-in user */
 export const addCardsInCollection = (cardIds: string[]) =>
-  gql<{ addCardsInCollection: { id: string; quantity: number }[] }>(
+  gql<AddCardsInCollectionMutation>(
     /* GraphQL */ `
       mutation AddCardsInCollection($input: UpdateUserCardsInput!) {
         addCardsInCollection(input: $input) {
@@ -154,33 +154,44 @@ export const addCardsInCollection = (cardIds: string[]) =>
   ).then((d) => d.addCardsInCollection)
 ```
 
+The types come from `src/api/generated/graphql.ts`, written by `npm run codegen` from the documents.
+Write the document first, run the codegen, then import the `<OperationName>Query`,
+`<OperationName>Mutation` and `<OperationName>QueryVariables` types it produced. Never edit the
+generated file.
+
 `src/api/cards.ts` shows how to declare and spread a fragment (`CARD_FIELDS`, spread as
-`...CardFields`). Don't copy the rest of it: its queries are anonymous, its exports have no JSDoc, and it
-imports `./client`.
+`...CardFields`, typed as `CardFieldsFragment`).
 
 Rules:
 
 - Name queries `get*` and mutations after the back's mutation. Document every export with one JSDoc
   line that says whether a token is required.
-- Every document starts with `/* GraphQL */` and has an operation name in PascalCase. Older documents
-  break this rule:
-  - `getCards`, `getCard`, `getCategories` and `getCardTypes` are tagged but anonymous;
-  - `login`, `register` and `updateMyProfile` are named but untagged;
-  - `fetchMyProfile` has neither.
-
-  Fix them only when you already touch that function.
-
+- Every document starts with `/* GraphQL */` and has an operation name in PascalCase: the codegen only
+  reads tagged documents, and it fails on an anonymous one next to another operation. Keep the document
+  a plain template literal (the only `${}` allowed is a fragment constant), otherwise the codegen
+  can't read it.
 - Select only the fields you use. Fragments go in a `SCREAMING_SNAKE` constant.
-- Interfaces mirror the back's GraphQL types, with comments where the types differ (`id: string`
+- Derive the API types from the generated ones (`GetCategoriesQuery['categories'][number]`, a
+  `…Fragment`) instead of writing them by hand. The scalars are mapped in `codegen.ts`: `ID` and
+  `DateTime` are `string`, `Int` is `number`. Keep a comment where the types differ (`id: string`
   because GraphQL serializes `ID` as a string).
 
-| Module          | Exports                                                                                                                                                                                                                             |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `auth.ts`       | `login(Credentials)` → token, `register(Credentials)` → token, `fetchMyProfile(token?)` → `User`, `updateMyProfile({ username? })`. The username is sent through `updateMyProfile` after register: `RegisterInput` has no username. |
-| `cards.ts`      | `getCards(filter?)`, `getCard(id)`. Types `Card` (API shape) and `CardsFilter`.                                                                                                                                                     |
-| `categories.ts` | `getCategories()`. Type `Category` (`{ id: string; name: string }`).                                                                                                                                                                |
-| `cardTypes.ts`  | `getCardTypes()`. Type `CardType` (`{ id: string; name: string }`).                                                                                                                                                                 |
-| `token.ts`      | `getToken()`, `setToken()`, `clearToken()`                                                                                                                                                                                          |
+| Module          | Exports                                                                                                                                                                                                                 |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth.ts`       | `login(input)` → token, `register(input)` → token, `fetchMyProfile(token?)` → `User`, `updateMyProfile({ username? })`. The username is sent through `updateMyProfile` after register: `RegisterInput` has no username. |
+| `cards.ts`      | `getCards(filter?)`, `getCard(id)`. Types `Card` (API shape, `CardFieldsFragment`) and `CardsFilter`.                                                                                                                   |
+| `categories.ts` | `getCategories()`. Type `Category` (`{ id: string; name: string }`).                                                                                                                                                    |
+| `cardTypes.ts`  | `getCardTypes()`. Type `CardType` (`{ id: string; name: string }`).                                                                                                                                                     |
+| `token.ts`      | `getToken()`, `setToken()`, `clearToken()`                                                                                                                                                                              |
+| `generated/`    | `graphql.ts`: types written by `npm run codegen`, committed. Never edit it.                                                                                                                                             |
+
+### Codegen
+
+`npm run codegen` introspects the running back (`http://localhost:3000/graphql`, or the URL in the
+`VITE_API_URL` variable) and writes `src/api/generated/graphql.ts` from the documents of `src/api/`
+(`codegen.ts`). Run it, and commit the result, whenever you add or change a document or the back changes
+its schema; `type-check` then flags the call sites that no longer match. The file is committed so CI
+doesn't need a back.
 
 `fetchMyProfile` predates the `get*` rule. Keep the name; don't rename it in an unrelated change.
 
