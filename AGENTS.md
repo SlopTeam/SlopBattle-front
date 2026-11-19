@@ -21,8 +21,9 @@ Read this file entirely before your first change. Then open the guide for the ar
 2. **One HTTP client.** Every back-end call goes through `gql()` from `src/api/client.ts`. Never import
    axios and never call `fetch` for the back. The one exception is a full-page navigation to the back
    (the Google sign-in), which uses `apiUrl()`.
-3. **Check, don't rewrite.** `npm run lint` and `npm run format` rewrite the **whole** repo. To check, run
-   the commands from [Definition of done](#definition-of-done).
+3. **Check, don't rewrite.** `npm run lint` rewrites fixable files across the whole repo and
+   `npm run format` rewrites every file in `src/`. To check, run the commands from
+   [Definition of done](#definition-of-done).
 4. **Tests never use watch mode.** Run `npx vitest run`, never `npm run test:unit` (it is `vitest`, which
    waits forever in a terminal).
 5. **`<script setup lang="ts">` + `<style scoped lang="scss">`**, block order template → script → style.
@@ -48,11 +49,16 @@ Read this file entirely before your first change. Then open the guide for the ar
 
 ### Decide or ask
 
-- **Decide yourself**, following the nearest existing file, for code structure, naming and style that
-  this documentation doesn't cover.
+- **Decide yourself** for code structure, naming and style that this documentation doesn't cover: copy
+  the most similar existing file in the same folder. The rules here, including the (decision) ones,
+  win over older code.
+- **Write yourself** the error, validation, loading and empty-state messages, following
+  [UI copy](#ui-copy).
 - **Ask the human** before you pick, for:
-  - product behavior, UI copy or visual design that neither the request nor Figma gives;
-  - anything the back doesn't define yet (the rarity mapping, the card "set", missing APIs);
+  - product behavior, visual design and page text (headings, descriptions, button labels) that neither
+    the request nor Figma gives;
+  - anything the back doesn't define yet (the card "set", missing APIs), and any change to the
+    assumed rarity mapping;
   - every topic in [decisions.md › Unknowns](docs/agents/decisions.md#unknowns-ask-dont-guess);
   - every item in **Ask first** below.
 - A human's request that explicitly asks for an Ask-first change ("add a CI job", "swap these
@@ -74,8 +80,10 @@ Read this file entirely before your first change. Then open the guide for the ar
 - Adding a client env variable (`VITE_*`).
 - Changing design tokens, the rarity system, the router guard, the auth store or `src/api/client.ts`.
 - Renaming or moving files, or changing the props, events or slots of a component other files use.
-- Deleting tests, or skipping them (`.skip` and `.only` fail lint anyway).
-- Starting without a Jira key: ask for the `SCRUM-<n>` key. Never invent one.
+- Deleting tests, or skipping them (in `src/`, `.skip` and `.only` fail lint; in `e2e/`, only `.only`
+  does).
+- Creating a branch or a commit without a Jira key: ask for the `SCRUM-<n>` key first. Never invent one.
+  Questions, reviews and diagnoses need no key.
 
 **Never**
 
@@ -84,7 +92,10 @@ Read this file entirely before your first change. Then open the guide for the ar
 - Commit secrets, `.env` files, tokens or credentials (even test ones).
 - Push to `develop` or `main`, force-push a branch someone else pushed to, merge a PR, or approve one.
 - Stash, reset or discard changes you didn't make.
-- Use `any`, `!`, `as unknown as`, `@ts-ignore`, or `v-html` with anything but a local SVG.
+- Use `any`, the non-null assertion (`value!`), `as unknown as`, `@ts-ignore`, `@ts-expect-error`, or
+  `v-html` with anything but a local SVG.
+- Run `npm run test:e2e`: without `CI=1` it starts the dev server and runs firefox and webkit too. Use
+  the E2E command from [Commands](#commands).
 - Remove `--no-experimental-webstorage` from `vitest.config.ts`.
 - Invent a token, a rarity mapping, a Jira key or a back-end field.
 
@@ -99,9 +110,10 @@ and build a collection. Planned later: quests, an economy (SlopCOIN) and battles
   can't read Jira: ask the human for the key and the ticket's content.
 - The back is NestJS + Apollo GraphQL (code-first) + MikroORM + Postgres, with JWT and Google OAuth.
   - Its code lives in `SlopTeam/SlopBattle-back`, usually checked out next to this repo
-    (`../SlopBattle-back`).
+    (`../SlopBattle-back`). If that folder doesn't exist, ask the human for its path.
   - Its current code is on `develop`. Its `main` is a stale init commit.
-  - Read it without checking it out: `git -C ../SlopBattle-back show origin/develop:<path>`.
+  - Read it without checking it out: `git -C ../SlopBattle-back fetch`, then
+    `git -C ../SlopBattle-back show origin/develop:<path>`.
 - Design source of truth: the Figma file. See [docs/agents/ui.md](docs/agents/ui.md#working-from-figma).
 - Current state:
   - Wired to the back: auth (email/password, Google, choosing a pseudo).
@@ -128,7 +140,8 @@ installed version (`npm ls <pkg>`) and its types in `node_modules/<pkg>/`.
 | sass-embedded    | 1.106     | SCSS, modern `@use` syntax                                     |
 | @playwright/test | 1.64      | e2e, a scaffold spec only                                      |
 
-- Use **Node 24** (`nvm use` reads `.nvmrc`), like CI and the Dockerfile. Node 26 also passes every check,
+- Use **Node 24**, at least 24.12 (`engines` rejects older 24.x), like CI and the Dockerfile.
+  `nvm install` reads `.nvmrc`. Node 26 also passes every check,
   because `vitest.config.ts` always passes `--no-experimental-webstorage` to the test workers (Node ≥ 25
   ships an empty native `localStorage` that would shadow jsdom's). **Never remove that flag.**
 - npm is the only package manager, and `package-lock.json` is committed. Use `npm ci` for a clean install.
@@ -167,7 +180,8 @@ Run every command from the repo root: `vite.config.ts` reads `.env` from `proces
       - `FRONT_URL=http://localhost:5173`;
       - `NODE_ENV=development` (it enables the GraphQL playground).
 
-      The back refuses to start without the JWT and Google values.
+      The back refuses to start without the JWT and Google values. It reads `FRONT_URL` only when
+      Google returns: without it, the Google sign-in ends on a 500.
 
    2. Start the database with `docker compose up -d db`.
    3. Run `npm ci`, then `npm run start:dev`. Migrations run at startup, and it listens on
@@ -179,7 +193,11 @@ Run every command from the repo root: `vite.config.ts` reads `.env` from `proces
 5. **Test data:** the back has no seed. With the playground at `http://localhost:3000/graphql`:
    - create categories, types and cards with the admin mutations (`createCategory`,
      `createCardType`, `createCard`);
-   - give yourself copies with `addCardsInCollection`, sent with your token.
+   - give yourself copies with `addCardsInCollection`, sent with your token: sign in on the front, copy
+     `slop-battle:access-token` from the browser's localStorage, and put
+     `{ "Authorization": "Bearer <token>" }` in the playground's HTTP HEADERS panel;
+   - `rarityId` is a plain integer with no table behind it: use 1 to 6 for `common` to `goat`, the
+     mapping the front assumes (see [Rarities](#domain-notes)).
 
    See [docs/agents/api.md](docs/agents/api.md#mutations).
 
@@ -188,7 +206,9 @@ your `.env`. Delete them.
 
 ## Definition of done
 
-A change is done when **all** of these pass. The first line is exactly what CI runs on Node 24:
+A change is done when **all** of these pass. The first line is what the CI `ci` job runs on Node 24.
+CI then builds the Docker image, which `npm run build-only` covers unless you touch `Dockerfile`,
+`docker/` or `.dockerignore`:
 
 ```sh
 npx oxlint . && npx eslint . && npm run type-check && npx vitest run && npm run build-only
@@ -197,14 +217,24 @@ npx prettier --check src/    # not in CI, but required here
 
 Also:
 
-- **Specs.** Every new or changed API function, adapter, composable, store action and component
-  behavior gets a spec in `<folder>/__tests__/<SourceFileName>.spec.ts` (`TcgCard.vue` →
-  `TcgCard.spec.ts`). A template-only view needs none. A bug fix comes with a test that fails without
-  the fix.
+- **Specs.** Every new or changed API function, adapter, composable, store action, and component or
+  view behavior gets a spec in `<folder>/__tests__/<SourceFileName>.spec.ts` (`TcgCard.vue` →
+  `TcgCard.spec.ts`). Add to the existing spec when there is one. Router guard tests go in
+  `src/router/__tests__/guard.spec.ts`. A template-only view needs none. A bug fix comes with a test
+  that fails without the fix, unless the fix is only assets or SCSS (Vitest doesn't compile styles):
+  then say so and check it in the browser.
 - **Browser check.** UI changes are checked in the browser (`npm run dev`), keyboard focus included. If
   you can't open a browser, say so: write « Non vérifié dans le navigateur » in the PR.
-- **Doc tables.** When you change a component's props, an API module, a composable, a route, a token or
-  a back request, update the matching table in this file or in `docs/agents/` in the same change.
+- **Docs.** In the same change, update what your change makes false:
+  - component props → [ui.md › Components](docs/agents/ui.md#components);
+  - API modules → [api.md › API modules](docs/agents/api.md#api-modules);
+  - composables → [api.md › Composables](docs/agents/api.md#composables) and the [Repo map](#repo-map);
+  - routes → [Routes](#routes);
+  - tokens → [ui.md › Tokens](docs/agents/ui.md#tokens-css-custom-properties) and [Styles](#styles);
+  - back requests → [decisions.md › Open back-end requests](docs/agents/decisions.md#open-back-end-requests);
+  - env variables → [Local setup](#local-setup) and `.env.example`;
+  - any other sentence that becomes false: "Current state" in [Project](#project), the CI line above,
+    [decisions.md › Known gaps](docs/agents/decisions.md#known-gaps).
 - **Scope.** Don't edit unrelated files, don't reformat untouched code, and don't delete tests to make
   CI pass.
 
@@ -253,21 +283,29 @@ older files predate them (listed in [decisions.md](docs/agents/decisions.md#conv
 ### TypeScript
 
 - Strict mode with `noUncheckedIndexedAccess`: `arr[0]` is `T | undefined`. Narrow it with a guard,
-  `?.` or `??`. **Never** use `!` or `as unknown as` (the codebase has none).
+  `?.` or `??`. **Never** use the non-null assertion (`value!`) or `as unknown as` (the codebase has
+  none).
 - No `any` (lint error).
-- No `enum` and no `console.*` in `src/`: lint doesn't catch these two. The only exception is the
-  dev-only `console.warn` in `src/api/client.ts`.
+- No `enum` and no `console.*` in `src/`. The only exception is the dev-only `console.warn` in
+  `src/api/client.ts`.
+- Lint doesn't catch `enum`, `console.*`, `value!`, `as unknown as`, `v-html` or "should" in test
+  titles: check them yourself.
 - For a fixed set of values, use an `as const` array plus a derived type, like `RARITIES` in
   `constants/rarity.ts`.
 - Use `interface` for object shapes and `type` for unions or derived types. Names are PascalCase with
   no `I` prefix.
 - Imports:
-  - Always import through `@/` (decision), never with a relative path.
+  - Import TS and Vue modules through `@/` (decision), never with a relative path. SCSS `@use` between
+    the global partials in `assets/styles/` stays relative.
   - Don't add an extension to TS imports. Always add `.vue` to component imports.
   - Use `import type { X }` when everything you import is a type, and an inline `type` when you mix
     values and types: `import { RouterLink, type RouteLocationRaw } from 'vue-router'`.
-- Naming: constants are `SCREAMING_SNAKE_CASE`, functions `camelCase`. Write `catch (error)`, not
-  `catch (e)` (decision).
+- Naming:
+  - fixed module-level values (keys, limits, patterns, fragments, code lists: `STORAGE_KEY`,
+    `PASSWORD_MIN_LENGTH`, `CARD_FIELDS`, `RARITIES`) are `SCREAMING_SNAKE_CASE`;
+  - object instances (`http`, `router`, `collator`) and functions are `camelCase`;
+  - write `catch (error)`, not `catch (e)` (decision). When `error` is already a ref, name the ref
+    `errorMessage` or `formError`.
 - Comments:
   - Add a one-line `/** JSDoc */` on new exported functions, interface fields and non-obvious props
     (decision).
@@ -329,13 +367,15 @@ Details and the full token list are in [docs/agents/ui.md](docs/agents/ui.md).
   palette, so `#E5E7EB` is gray-200 and `#6B7280` is gray-500.
 
 - Spacing, font sizes and line heights are **literal px** copied from Figma: no tokens exist for them.
-- Shadow and mask colors have no token. Write them literally, as `HeaderComponent` (`rgb(17 24 39 /
-12%)`) and `TcgCard` (`#000` / `#0000` in masks) do. Any other new color needs a token, which is an
-  Ask-first change.
+- Shadow and mask colors have no token. Write them literally, as `HeaderComponent`
+  (`rgb(17 24 39 / 12%)`) and `TcgCard` (`#000` / `#0000` in masks) do. Any other new theme color needs
+  a token, which is an Ask-first change. Colors that are content (a booster's gradient) are data: see
+  [ui.md › Colors from data](docs/agents/ui.md#colors-from-data).
 - In a component, never `@use` the SCSS abstracts: Vite injects them into every component
   `<style lang="scss">`. Their mixins are ready to use: `focus-ring`, `field-label`, `field-box`,
   `small-screen` (≤ 640px, the only breakpoint) and `visually-hidden`. The global partials in
-  `assets/styles/` are not injected and start with `@use 'abstracts' as *;`.
+  `assets/styles/` are not injected: one that uses a map or a mixin loads them with
+  `@use 'abstracts' as *;`, as `_tokens`, `_rarity` and `_base` do.
 - `_base.scss` does not reset margins: reset `margin: 0` on headings, `p` and `ul` in your component.
 - Style a child component by passing it a class, which falls through to its root. Use `:deep()` only
   for slot content.
@@ -358,6 +398,27 @@ Details and the full token list are in [docs/agents/ui.md](docs/agents/ui.md).
   `auth_callback`.
 - Hard-coded paths are allowed only for a `?redirect=` value checked by `toInternalPath`, and in specs.
 
+#### Routes
+
+| Name              | Path                  | Meta           | View                                        |
+| ----------------- | --------------------- | -------------- | ------------------------------------------- |
+| `home`            | `/`                   | —              | `HomeView`                                  |
+| `catalogue`       | `/catalogue`          | — (public)     | `collection/CatalogueView`                  |
+| `collection_list` | `/profile/collection` | `requiresAuth` | `collection/CollectionView` (Ma collection) |
+| `booster_list`    | `/boosters`           | —              | `game/BoosterListView` (placeholder)        |
+| `login`           | `/login`              | `guestOnly`    | `auth/LoginView`                            |
+| `register`        | `/register`           | `guestOnly`    | `auth/RegisterView`                         |
+| `auth_callback`   | `/auth/callback`      | —              | `auth/AuthCallbackView` (Google return)     |
+| `choose_username` | `/choose-username`    | `requiresAuth` | `auth/ChooseUsernameView`                   |
+| `profile`         | `/profile`            | `requiresAuth` | `account/ProfileView` (placeholder)         |
+| `settings`        | `/settings`           | `requiresAuth` | `account/SettingsView` (placeholder)        |
+| `coming_soon`     | `/coming-soon`        | —              | `system/ComingSoonView`                     |
+| `maintenance`     | `/maintenance`        | —              | `system/MaintenanceView`                    |
+| `not_found`       | `/:pathMatch(.*)*`    | —              | `system/NotFoundView` (must stay last)      |
+
+Routes are flat: `/profile/collection` is not a child of `/profile`. When a request names a page that
+has a placeholder here, build it in that view and keep its route, instead of creating a new one.
+
 ### State (Pinia)
 
 - Use setup stores only: `export const useXStore = defineStore('x', () => { … return { … } })`. State
@@ -365,10 +426,13 @@ Details and the full token list are in [docs/agents/ui.md](docs/agents/ui.md).
   member.
 - Consume a store as `const auth = useAuthStore()` and read it directly. Don't use `storeToRefs`.
 - Today there is one store, `auth`: `user` (a `User` with `id`, `email`, `username`, `avatarUrl`,
-  `coins`, `createdAt`), `isAuthenticated`, `needsUsername`, and the actions in
+  `coins`, `createdAt`), `isAuthenticated`, `needsUsername`, `sessionExpired` (set when the back
+  rejects the token, reset by `redirectOnSessionExpiry` in the router), and the actions in
   [docs/agents/api.md](docs/agents/api.md#auth-flows-srcstoresauthts-srcrouterindexts).
-- Data that only one view needs stays in that view (`useApi`). Create a new store only when several
-  views share state, and ask first.
+- The logged-in user's profile is already in `auth.user`: read it there, and change the pseudo with
+  `auth.setUsername()` so every screen stays in sync. Don't reload it with `useApi`.
+- Other data that only one view needs stays in that view (`useApi`). Create a new store only when
+  several views share state, and ask first.
 
 ### API layer (`src/api/`)
 
@@ -384,7 +448,8 @@ Full reference, with the back's schema, errors and gaps: [docs/agents/api.md](do
 - IDs:
   - Fields typed `ID` arrive as **strings**: card, category and card-type ids, `CollectionCard.cardId`.
   - The inputs `cardIds`, `categoryIds` and `typeIds` expect `Int`: convert them with `Number()`.
-  - `rarityId` and user ids are `Int` both ways.
+  - `rarityId` and user ids are `Int` both ways, except `CardCollection.userId` (from
+    `myCardCollection`), which is an `ID` and arrives as a string.
   - `card(id)`, `category(id)` and `cardType(id)` take the string as is.
 - Pass `{ token: null }` on `login` and `register`. Otherwise a stale stored token is sent, and a wrong
   password looks like an expired session.
@@ -418,12 +483,15 @@ Full reference, with the back's schema, errors and gaps: [docs/agents/api.md](do
   - views and components that load data mock the API module they import (`vi.mock('@/api/cards')`);
   - client and integration tests mock `axios`;
   - components get a real Pinia plus a memory router, and spy on store actions they call.
-- Reset in `beforeEach`:
-  - `localStorage.clear()`, plus `sessionStorage.clear()` when the test uses it;
-  - `setActivePinia(createPinia())`;
-  - `vi.resetAllMocks()`.
+- In `beforeEach`, reset what the spec touches:
+  - `localStorage.clear()` (plus `sessionStorage.clear()`) when it uses storage;
+  - `setActivePinia(createPinia())` when it uses a store;
+  - `vi.resetAllMocks()` when it has mocks.
 
   Undo `vi.stubEnv` and `vi.stubGlobal` in `afterEach`.
+
+- E2E: `e2e/vue.spec.ts` checks the `<h1>` of `HomeView.vue`. If you change it, update the spec and
+  run the E2E command: CI doesn't run Playwright.
 
 - Build an `ApiError` in a test with `new ApiError(message, { code, status })`.
 - Copy the patterns from the existing specs. [docs/agents/recipes.md](docs/agents/recipes.md) has
@@ -443,13 +511,17 @@ Full reference, with the back's schema, errors and gaps: [docs/agents/api.md](do
   | Loading             | `<p role="status">Chargement…</p>`                                         |
   | Filtered list empty | `Aucune carte ne correspond à votre recherche.` (already in `CardBrowser`) |
 
-  Specific messages for specific cases are fine, e.g. "Connectez-vous pour voir vos cartes."
+  Write a specific message when you know the case, e.g. "Connectez-vous pour voir vos cartes." for a
+  401, and the validation messages of a form. Ask for page text (headings, descriptions, button
+  labels).
 
 - Words used in the UI:
   - carte, catalogue, Ma collection, booster;
   - édition (a card set), type, rareté;
   - pseudo (never "nom d'utilisateur"), SlopCOIN;
-  - exemplaire(s).
+  - exemplaire(s);
+  - email (never "e-mail" or "courriel"), mot de passe, se connecter, se déconnecter, créer un compte.
+- Answer the human in the language they write in (French for this team).
 - Format numbers and dates with `Intl` and `'fr-FR'`. Format date-only strings (`YYYY-MM-DD`) with
   `timeZone: 'UTC'`. The back's `DateTime` values are full timestamps: cut them to `YYYY-MM-DD` in the
   adapter.
@@ -462,9 +534,10 @@ Full reference, with the back's schema, errors and gaps: [docs/agents/api.md](do
   - Labels: Mid, Based, Sigma, Chad, Ascended, Goated, in `RARITY_LABELS`.
   - The design handoff uses the labels as codes (mid, sigma…). Never copy them into code.
   - `goat` exists only in the front and has no design yet.
-  - The back only has `rarityId: Int`, and nothing maps it to a code. **Ask** the human for the mapping
-    before you write one. Write only the mapping you were given, in `toRarity()` in
-    `src/api/adapters.ts`, with `TODO(back): rarity contract (B2)`.
+  - The back only has `rarityId: Int`, with no rarity table. The front **assumes** `rarityId` 1 to 6 =
+    `common` to `goat`, the same as the back office: `toRarity()` and `toRarityId()` in
+    `src/api/adapters.ts`, marked `TODO(back): rarity contract (B2)`. An unknown id falls back to
+    `common`. Use these two functions everywhere, and ask before you change the mapping.
 - **Cards**: the UI `Card` (`@/types/card`) and the API `Card` (`@/api/cards`) differ:
 
   | UI `Card`                              | API `Card`                    | Adapter rule                      |
@@ -472,29 +545,32 @@ Full reference, with the back's schema, errors and gaps: [docs/agents/api.md](do
   | `id: number`                           | `id: string`                  | `Number(id)`                      |
   | `name`                                 | `title`                       | copy                              |
   | `illustration`                         | `imageUrl`                    | copy                              |
-  | `rarity: Rarity`                       | `rarityId: number`            | `toRarity()`: ask first           |
+  | `rarity: Rarity`                       | `rarityId: number`            | `toRarity()` (assumed, B2)        |
   | `types: string[]`                      | `types: { id, name }[]`       | names                             |
   | `categories: string[]`                 | `categories: { id, name }[]`  | names                             |
-  | `set: string` (the « Édition » filter) | none                          | **ask** which category is the set |
+  | `set: string` (the « Édition » filter) | none                          | `''` until the back has one (B8)  |
   | `description: string`                  | `description: string \| null` | `?? ''`                           |
   | `createdAt` `YYYY-MM-DD`               | `createdAt` full timestamp    | `.slice(0, 10)`                   |
+  | none                                   | `updatedAt` full timestamp    | dropped                           |
 
-  The UI `Card` has no copy count. Adding one changes `CardBrowser`'s props, so ask first.
+  `toCard()` in `src/api/adapters.ts` applies these rules. The UI `Card` has no copy count. Adding one
+  changes `CardBrowser`'s props: ask how it is shown (no Figma node shows it) even when the request
+  asks for it.
 
 - **Two catalogues** (product decision):
   - the public catalogue (`/catalogue`) shows all cards, without an account;
   - the personal collection (`/profile/collection`) shows the user's cards with their copy count.
 
-  Today the back requires a JWT for `cards`, `card`, `categories`, `category`, `cardTypes` and
-  `cardType`. The public catalogue therefore can't load for logged-out visitors (request B1). Ask
-  what logged-out visitors should see before you wire it.
+  Today the back requires a JWT for `cards`, `cardsPage`, `card`, `categories`, `category`,
+  `cardTypes` and `cardType`. A logged-out visitor on the catalogue therefore sees « Connectez-vous
+  pour voir les cartes. » until the back opens these reads (request B1).
 
 - **Mock data**:
   - When a screen needs data that the back doesn't expose yet (boosters today), build it on typed mock
-    data in `src/mocks/<domain>.ts`.
+    data in `src/mocks/<resource>.ts`, named after the data like `cards.ts` (e.g. `boosters.ts`).
   - Type it with a UI type from `src/types/`, and mark it `// TODO(back): <missing API>`.
   - Never put mocks in `src/api/`, never fake a GraphQL response, and list the missing API under
-    « À demander au back ».
+    « À demander au back ». (Playwright `page.route` mocks in `e2e/` are a separate question: ask.)
 - **Auth**:
   - The JWT lasts 1 hour, with no refresh token.
   - When it expires, the next call logs the user out. On a `requiresAuth` page, the user is redirected
@@ -511,21 +587,27 @@ Never change the back from this repo and never hide a missing back feature in th
 2. Write the request in your answer or PR under **« À demander au back »**, so a human can turn it into
    a Jira ticket.
 3. If the whole fix belongs to the back or to the deploy config, deliver a diagnosis and the request
-   in your answer. Don't create a branch or a PR unless the human asks.
+   in your answer. "Corrige ça" is not a request for a branch or a PR: create one only when the human
+   asks for it. You may describe the exact back change (file, guard, line) so a back developer can
+   apply it.
 
 Known open requests: [docs/agents/decisions.md › Open back-end requests](docs/agents/decisions.md#open-back-end-requests).
 
 ## Git and pull requests
 
 - **Branch** from an up-to-date `develop`:
-  `git fetch --prune && git switch -c <type>/SCRUM-<n>-<kebab-slug> origin/develop`.
+  `git fetch --prune && git switch --no-track -c <type>/SCRUM-<n>-<kebab-slug> origin/develop`.
+  Push it the first time with `git push -u origin HEAD`. (Without `--no-track`, the branch tracks
+  `develop` and a plain `git push` fails or targets `develop`.)
   - Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `ci`.
-  - Example: `feat/SCRUM-28-public-catalogue`.
+  - Example: `feat/SCRUM-28-public-catalogue`. The slug is English.
   - Always use the full Jira key, never a bare number.
-- **Commits** are in English, in gitmoji form: `:code: | Imperative subject`. That is the gitmoji code, a
-  space, a pipe, a space, then a capitalized subject with no final period.
-  - Add a body (the why, as a bulleted list) when the change is not obvious.
-  - End with a `Refs: SCRUM-<n>` trailer, placed before any `Co-Authored-By:` line your tool adds.
+- **Commits** are in English, in gitmoji form: `:<gitmoji>: | Imperative subject`, e.g.
+  `:bug: | Let the Google return through the router guard`. That is the gitmoji code, a space, a pipe,
+  a space, then a capitalized subject with no final period.
+  - Add a body (the why, as a bulleted list) unless the subject alone explains the change.
+  - End with a `Refs: SCRUM-<n>` line in the last paragraph, directly above any `Co-Authored-By:` line
+    your tool adds, with no blank line between them (git only parses the last paragraph as trailers).
   - Only use codes from this list:
 
   | Code                    | Use for                           | Code                 | Use for                                      |
@@ -543,21 +625,32 @@ Known open requests: [docs/agents/decisions.md › Open back-end requests](docs/
 - **Pull requests**:
   - Open one only when the human asks. Always target develop: `gh pr create --base develop`, or pick
     `develop` as the base on GitHub.
-  - Title: the Unicode emoji of the main gitmoji, then `SCRUM-<n> : <résumé en français>`. Example:
+  - Title: the Unicode emoji of the main gitmoji (`:recycle:` → ♻️, `:bug:` → 🐛, `:sparkles:` → ✨;
+    see [gitmoji.dev](https://gitmoji.dev)), then `SCRUM-<n> : <résumé en français>`. Example:
     `♻️ SCRUM-54 : un seul client GraphQL`.
+  - Open it ready for review, with no reviewer, assignee or label unless the human names them.
   - Body in French, following `.github/pull_request_template.md`: Jira link, Pourquoi, Ce qui change,
     Tests, À demander au back, and Hors périmètre (delete it when empty).
   - One ticket per PR. If your branch starts from another unmerged branch, write `Dépend de #<PR>` as
     the first line of the body.
-  - PRs are squash-merged by a human (decision), so the PR title becomes the commit on `develop`.
-- **Updating a branch:** `git fetch && git rebase origin/develop`, then `git push --force-with-lease` on
-  your own branch. Never merge `main` into a branch. Never force-push `develop`, `main`, or a branch
-  someone else pushed to.
+  - PRs are squash-merged by a human (decision). The merger sets the squash commit title to the PR
+    title (for a one-commit PR, GitHub prefills the commit's own subject instead).
+- **Updating a branch** (only when the human asks): `git fetch && git rebase origin/develop`, then
+  `git push --force-with-lease` on your own branch. If your branch was stacked on a PR that has since
+  been squash-merged, replay only your commits:
+  `git rebase --onto origin/develop <last commit of the base branch>`. Never merge `main` into a
+  branch. Never force-push `develop`, `main`, or a branch someone else pushed to.
 - **Deploys:** a push to `develop` triggers the staging deploy job, and a push to `main` the production
-  one. Neither branch is protected, and the deploy runner is currently stuck (see
-  [decisions.md › Known gaps](docs/agents/decisions.md#known-gaps)).
+  one. The deploy jobs run on GitHub-hosted runners and reach Portainer through Cloudflare Access.
+  Neither branch is protected.
 - **Reviewing a PR** when asked:
-  - Answer in the chat, in French, with blocking points first, then suggestions.
+  - If the human gives no PR number or link, ask for it.
+  - Answer in the chat, in French, with blocking points first, then suggestions. Quote `file:line`.
+    Blocking: a broken check, a TL;DR rule or a **Never** item broken, a missing spec. Commit messages
+    of the branch are suggestions only, since the squash replaces them.
   - Post on GitHub only if the human asks. Never approve, request changes or merge.
-  - To run the checks, use a separate worktree: `git worktree add ../review-<n> origin/<branch>`.
+  - To run the checks, use a separate worktree:
+    `git fetch origin <branch> && git worktree add ../review-<n> origin/<branch>`, then `npm ci` in it
+    (worktrees don't share `node_modules`). Run the Definition of done there, then
+    `git worktree remove ../review-<n>`.
   - Check the TL;DR rules first: component names, tokens, routes, commit and PR format.

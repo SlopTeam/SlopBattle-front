@@ -6,7 +6,8 @@ exist yet.
 
 ## Add a page (route + view)
 
-1. Create `src/views/<domain>/<Name>View.vue`. Domains:
+1. If the page already has a placeholder view ([AGENTS.md › Routes](../../AGENTS.md#routes)), build it
+   there and keep its route. Otherwise create `src/views/<domain>/<Name>View.vue`. Domains:
 
    | Domain       | Holds                                           |
    | ------------ | ----------------------------------------------- |
@@ -63,8 +64,9 @@ exist yet.
 1. Check that the operation exists in the back's schema: see the schema tables in [api.md](api.md).
    If it doesn't exist, stop and write a back request.
 2. Add the function to `src/api/<resource>.ts`, or create the module. API functions take ids as the API
-   returns them (strings) and convert them to `Int` inside. Template (`src/api/collection.ts`, to
-   create):
+   returns them (strings). Convert them with `Number()` only for `Int` inputs (`cardIds`,
+   `categoryIds`, `typeIds`); pass `ID!` arguments such as `card(id)` as is. Template
+   (`src/api/collection.ts`, to create):
 
    ```ts
    import { gql } from '@/api/client'
@@ -147,28 +149,19 @@ exist yet.
 
 ## Show back-end data in a view
 
-1. Convert API shapes to UI shapes in `src/api/adapters.ts` (to create), with pure `to<UiType>()`
-   functions, never in a component. For cards, don't invent the two unknowns: the caller passes the
-   rarity and the set, from mappings a human gave you (see AGENTS.md › Domain notes).
+1. Convert API shapes to UI shapes in `src/api/adapters.ts`, with pure `to<UiType>()` functions, never
+   in a component. Cards already have `toCard()` (with `toRarity()` and `toRarityId()`): reuse them.
+   For a new shape, add a function next to them and its test in `src/api/__tests__/adapters.spec.ts`.
+   For a paged card list, don't write a view by hand: use `useCardsPage`, like `CatalogueView`.
+
+   Example for a new shape:
 
    ```ts
-   import type { Card as ApiCard } from '@/api/cards'
-   import type { Rarity } from '@/constants/rarity'
-   import type { Card } from '@/types/card'
+   import type { Category as ApiCategory } from '@/api/categories'
 
-   /** UI card from an API card; `rarity` and `set` come from mappings the back doesn't define yet */
-   export function toCard(card: ApiCard, rarity: Rarity, set: string): Card {
-     return {
-       id: Number(card.id),
-       name: card.title,
-       rarity,
-       types: card.types.map((type) => type.name),
-       description: card.description ?? '',
-       set,
-       categories: card.categories.map((category) => category.name),
-       createdAt: card.createdAt.slice(0, 10),
-       illustration: card.imageUrl,
-     }
+   /** Filter option of a category: the value is its id, as `useCardsPage` expects */
+   export function toCategoryOption(category: ApiCategory): { value: string; label: string } {
+     return { value: category.id, label: category.name }
    }
    ```
 
@@ -243,8 +236,8 @@ exist yet.
    })
    ```
 
-4. Remember that `cards`, `categories` and `cardTypes` require a token today. Ask what logged-out
-   visitors should see on a public page before you wire it.
+4. Remember that the card, category and card-type reads require a token today (B1). On a page behind
+   auth, map the 401 to « Connectez-vous pour … », as above and as `useCardsPage` does.
 
 ## Call a mutation from a button
 
@@ -252,18 +245,22 @@ exist yet.
 
 ```ts
 import { ref } from 'vue'
+import { ApiError } from '@/api/client'
 import { addCardsInCollection } from '@/api/collection'
 
 const pending = ref(false)
-const error = ref('')
+const errorMessage = ref('')
 
 async function add(cardId: number) {
-  error.value = ''
+  errorMessage.value = ''
   pending.value = true
   try {
     await addCardsInCollection([String(cardId)])
-  } catch {
-    error.value = 'Une erreur est survenue, réessayez.'
+  } catch (error) {
+    errorMessage.value =
+      error instanceof ApiError && error.isUnauthorized
+        ? 'Connectez-vous pour ajouter des cartes.'
+        : 'Une erreur est survenue, réessayez.'
   } finally {
     pending.value = false
   }
@@ -271,8 +268,11 @@ async function add(cardId: number) {
 ```
 
 - Disable the button while `pending`: `<BaseButton :disabled="pending" …>`.
-- Show `error` with `<BaseAlert :message="error" />` next to it.
+- Show the message with `<BaseAlert v-if="errorMessage" :message="errorMessage" />` next to it:
+  `BaseAlert` renders its box even when the message is empty.
 - Placing the button inside `TcgCard` or `CardBrowser` changes a shared component's API: ask first.
+- `addCardsInCollection` is a test-data tool today (any user can add any card). Ask before you put it
+  behind a player-facing button.
 
 ## Add a form
 
@@ -322,12 +322,15 @@ async function submit() {
 - The submit label shows `…` while `pending`.
 - Error messages are French and use vouvoiement.
 - **Outside auth**:
-  - replace the store action with your API call or store action;
+  - replace the store action with your API call, or with a store action when the data lives in a
+    store (change the pseudo with `auth.setUsername()`, so `auth.user` stays in sync);
   - don't call `redirectAfterAuth()`: stay on the page and show a success message with
     `<BaseAlert variant="success">`, or navigate with `router.push({ name: '…' })` if the request says
     so;
-  - map `ApiError` statuses to French messages in the catch. `setUsername` already turns errors into
-    `AuthError`s.
+  - map `ApiError` statuses to French messages in the catch. `setUsername` throws `AuthError`s, but
+    they keep the back's message unchanged ("Ce nom d'utilisateur est déjà utilisé", or an English
+    validation message such as "username must be shorter than or equal to 30 characters"): validate
+    3–30 characters locally and map those errors to French too.
 
 ## Add a reusable component
 
@@ -400,8 +403,8 @@ async function submit() {
 
 When the back has no API for a screen yet (boosters today):
 
-1. Add or reuse a UI type in `src/types/<domain>.ts`.
-2. Put the data in `src/mocks/<domain>.ts`, typed with that UI type, headed
+1. Add or reuse a UI type in `src/types/<resource>.ts`, named after the data (`card.ts`, `booster.ts`).
+2. Put the data in `src/mocks/<resource>.ts` (`cards.ts`, `boosters.ts`), typed with that UI type, headed
    `// TODO(back): <missing API>`.
 3. The view imports the mock directly. Never put mocks in `src/api/` and never fake a GraphQL response.
 4. Write the missing API under « À demander au back » in the PR.
@@ -409,7 +412,8 @@ When the back has no API for a screen yet (boosters today):
 ## Test a component that needs the router or a store
 
 Copy `src/views/auth/__tests__/AuthCallbackView.spec.ts`. Stub the store actions the component calls:
-otherwise they send real requests to `http://localhost:3000`, the origin Vitest's jsdom uses.
+otherwise they send real requests, to the `VITE_BACKEND_URL` of your local `.env`, or to
+`http://localhost:3000` (the origin Vitest's jsdom uses) when it is empty.
 
 ```ts
 function setup() {
@@ -457,13 +461,16 @@ afterEach(() => vi.unstubAllEnvs())
 
 ## Change the dev or deploy configuration
 
-All of these are **Ask first**, unless the request asks for them.
+Changing these files is **Ask first**, unless the request asks for it. Setting `API_PROXY_TARGET` in
+your own `.env` ([AGENTS.md › Local setup](../../AGENTS.md#local-setup)) and running the image locally
+change nothing in the repo. A request for one change approves only that change: if it also needs the
+`Dockerfile` or `ci.yml`, ask.
 
-| Need                                    | Where                                                                                                                                                                                                                                                                                                          |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The local back runs on another port     | `.env`: `API_PROXY_TARGET=http://localhost:3001`                                                                                                                                                                                                                                                               |
-| Proxy a new back route in dev           | `vite.config.ts` `server.proxy`                                                                                                                                                                                                                                                                                |
-| Proxy a new back route in Docker / prod | `docker/default.conf.template`: add the path inside the group of `location ~ ^/(graphql\|auth/google)(/\|$)` and keep the `(/\|$)` boundary                                                                                                                                                                    |
-| Back address in staging and prod        | `BACKEND_UPSTREAM` in the Portainer stack, outside the repo: a human with access does it                                                                                                                                                                                                                       |
-| A new client env variable               | `VITE_*` in `.env.example`, declared in `env.d.ts`, read in a single module. Values are inlined at build time and the Docker image gets none (`.dockerignore` drops `.env*`, the `Dockerfile` has no `ARG`): staging and prod also need a build argument in the `Dockerfile` and in `.github/workflows/ci.yml` |
-| Run the Docker image locally            | `docker build -t slopbattle-front:local .` then `docker run --rm -p 18080:80 -e BACKEND_UPSTREAM=http://host.docker.internal:3000 slopbattle-front:local`                                                                                                                                                      |
+| Need                                    | Where                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The local back runs on another port     | `.env`: `API_PROXY_TARGET=http://localhost:3001`                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Proxy a new back route in dev           | `vite.config.ts` `server.proxy`                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Proxy a new back route in Docker / prod | `docker/default.conf.template`: add the path inside the group of `location ~ ^/(graphql\|auth/google)(/\|$)` and keep the `(/\|$)` boundary                                                                                                                                                                                                                                                                                                                                   |
+| Back address in staging and prod        | `BACKEND_UPSTREAM` in the Portainer stack, outside the repo: a human with access does it                                                                                                                                                                                                                                                                                                                                                                                      |
+| A new client env variable               | `VITE_*` in `.env.example`, declared in `env.d.ts`, read in a single module. Values are inlined at build time into the public bundle: never put a secret there. The Docker image gets none (`.dockerignore` drops `.env` and `.env.*` except `.env.example`, which Vite never reads, and the `Dockerfile` has no `ARG`). Staging and prod would need a build argument in the `Dockerfile` and in `.github/workflows/ci.yml`: ask first, and ask whether one image serves both |
+| Run the Docker image locally            | `docker build -t slopbattle-front:local .` then `docker run --rm -p 18080:80 -e BACKEND_UPSTREAM=http://host.docker.internal:3000 slopbattle-front:local` (Docker Desktop; on Linux, nginx resolves the name through DNS only, so use the bridge gateway IP, e.g. `http://172.17.0.1:3000`)                                                                                                                                                                                   |
