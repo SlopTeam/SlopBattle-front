@@ -534,10 +534,12 @@ Full reference, with the back's schema, errors and gaps: [docs/agents/api.md](do
   - Labels: Mid, Based, Sigma, Chad, Ascended, Goated, in `RARITY_LABELS`.
   - The design handoff uses the labels as codes (mid, sigma…). Never copy them into code.
   - `goat` exists only in the front and has no design yet.
-  - The back only has `rarityId: Int`, with no rarity table. The front **assumes** `rarityId` 1 to 6 =
-    `common` to `goat`, the same as the back office: `toRarity()` and `toRarityId()` in
-    `src/api/adapters.ts`, marked `TODO(back): rarity contract (B2)`. An unknown id falls back to
-    `common`. Use these two functions everywhere, and ask before you change the mapping.
+  - The back has a `Rarity { id, name, sortOrder }` entity (`rarities` query, sorted by `sortOrder`).
+    Mapping chosen by the human: the n-th rarity of that list takes the n-th code (`common`…`goat`),
+    an unknown one falls back to `common`. It lives in `toRarity()` in `src/api/adapters.ts`, with
+    `TODO(back): rarity contract (B2)`. Ask before changing it.
+  - The catalogue's rarity filter lists the back's rarities (value = id, label = back `name`); the
+    collection (mocks) still lists the codes with `RARITY_LABELS`.
 - **Cards**: the UI `Card` (`@/types/card`) and the API `Card` (`@/api/cards`) differ:
 
   | UI `Card`                              | API `Card`                    | Adapter rule                      |
@@ -545,7 +547,7 @@ Full reference, with the back's schema, errors and gaps: [docs/agents/api.md](do
   | `id: number`                           | `id: string`                  | `Number(id)`                      |
   | `name`                                 | `title`                       | copy                              |
   | `illustration`                         | `imageUrl`                    | copy                              |
-  | `rarity: Rarity`                       | `rarityId: number`            | `toRarity()` (assumed, B2)        |
+  | `rarity: Rarity`                       | `rarity: { id, name, sortOrder }` | `toRarity(id, rarities)`: rank |
   | `types: string[]`                      | `types: { id, name }[]`       | names                             |
   | `categories: string[]`                 | `categories: { id, name }[]`  | names                             |
   | `set: string` (the « Édition » filter) | none                          | `''` until the back has one (B8)  |

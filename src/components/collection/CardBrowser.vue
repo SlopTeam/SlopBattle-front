@@ -32,7 +32,7 @@
           v-model="filters.rarity"
           label="Rareté"
           placeholder="Choisir une rareté"
-          :options="rarityOptions"
+          :options="withAll('Toutes les raretés', rarityOptions)"
         />
       </div>
       <FilterSelect v-model="sort" class="browser__sort" label="Trier par" :options="sortOptions" />
@@ -121,6 +121,8 @@ const props = withDefaults(
     pageCount: number
     groupFilter: GroupFilter
     typeOptions: SelectOption[]
+    /** Defaults to the dev codes (`common`…), which the collection filters on */
+    rarityOptions?: SelectOption[]
     searchPlaceholder?: string
     /** A page is loading: the current cards stay visible */
     pending?: boolean
@@ -130,6 +132,8 @@ const props = withDefaults(
     searchPlaceholder: 'Rechercher une carte, une édition ou un type',
     pending: false,
     error: '',
+    rarityOptions: () =>
+      RARITIES.map((rarity) => ({ value: rarity, label: RARITY_LABELS[rarity] })),
   },
 )
 
@@ -169,10 +173,6 @@ function withAll(allLabel: string, options: SelectOption[]): SelectOption[] {
   return [{ value: '', label: allLabel }, ...options]
 }
 
-const rarityOptions: SelectOption[] = [
-  { value: '', label: 'Toutes les raretés' },
-  ...RARITIES.map((rarity) => ({ value: rarity, label: RARITY_LABELS[rarity] })),
-]
 const sortOptions: (SelectOption & { value: CardSort })[] = [
   { value: 'name-asc', label: 'Nom A→Z' },
   { value: 'name-desc', label: 'Nom Z→A' },

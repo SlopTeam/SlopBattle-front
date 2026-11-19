@@ -68,9 +68,9 @@ export type CardFieldsFragment = {
   title: string
   description: string | null
   imageUrl: string
-  rarityId: number
   createdAt: string
   updatedAt: string
+  rarity: { id: string; name: string; sortOrder: number | null }
   categories: Array<{ id: string; name: string }>
   types: Array<{ id: string; name: string }>
 }
@@ -85,9 +85,9 @@ export type GetCardsQuery = {
     title: string
     description: string | null
     imageUrl: string
-    rarityId: number
     createdAt: string
     updatedAt: string
+    rarity: { id: string; name: string; sortOrder: number | null }
     categories: Array<{ id: string; name: string }>
     types: Array<{ id: string; name: string }>
   }>
@@ -110,9 +110,9 @@ export type GetCardsPageQuery = {
       title: string
       description: string | null
       imageUrl: string
-      rarityId: number
       createdAt: string
       updatedAt: string
+      rarity: { id: string; name: string; sortOrder: number | null }
       categories: Array<{ id: string; name: string }>
       types: Array<{ id: string; name: string }>
     }>
@@ -129,9 +129,9 @@ export type GetCardQuery = {
     title: string
     description: string | null
     imageUrl: string
-    rarityId: number
     createdAt: string
     updatedAt: string
+    rarity: { id: string; name: string; sortOrder: number | null }
     categories: Array<{ id: string; name: string }>
     types: Array<{ id: string; name: string }>
   }
@@ -140,3 +140,9 @@ export type GetCardQuery = {
 export type GetCategoriesQueryVariables = Exact<{ [key: string]: never }>
 
 export type GetCategoriesQuery = { categories: Array<{ id: string; name: string }> }
+
+export type GetRaritiesQueryVariables = Exact<{ [key: string]: never }>
+
+export type GetRaritiesQuery = {
+  rarities: Array<{ id: string; name: string; sortOrder: number | null }>
+}

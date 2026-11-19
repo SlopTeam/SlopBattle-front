@@ -187,8 +187,9 @@ Rules:
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `auth.ts`       | `login(input)` → token, `register(input)` → token, `fetchMyProfile(token?)` → `User`, `updateMyProfile({ username? })`. The username is sent through `updateMyProfile` after register: `RegisterInput` has no username. |
 | `cards.ts`      | `getCards(filter?)`, `getCardsPage({ filter?, page, pageSize, sort }, options?)` → `{ items, total, page, pageCount }`, `getCard(id)`. Types `Card` (API shape, `CardFieldsFragment`), `CardsFilter`, `CardSort`.       |
-| `adapters.ts`   | `toCard(apiCard)`, `toRarity(rarityId)`, `toRarityId(rarity)`. Assumed rarity mapping: `rarityId` 1..6 = `common`..`goat` (same as the back office), `set` stays empty (B8).                                            |
+| `adapters.ts`   | `toCard(apiCard, rarities)`, `toRarity(rarityId, rarities)`. Rarity mapping: the n-th rarity of `getRarities()` = the n-th code `common`..`goat`, unknown = `common`; `set` stays empty (B8).                                            |
 | `categories.ts` | `getCategories()`. Type `Category` (`{ id: string; name: string }`).                                                                                                                                                    |
+| `rarities.ts`   | `getRarities()`, most common first. Type `ApiRarity` (`{ id: string; name: string; sortOrder: number \| null }`). |
 | `cardTypes.ts`  | `getCardTypes()`. Type `CardType` (`{ id: string; name: string }`).                                                                                                                                                     |
 | `token.ts`      | `getToken()`, `setToken()`, `clearToken()`                                                                                                                                                                              |
 | `generated/`    | `graphql.ts`: types written by `npm run codegen`, committed. Never edit it.                                                                                                                                             |
@@ -249,13 +250,14 @@ The schema is code-first and lives in memory: there is no `.graphql` file in the
 | `cards(filter: CardsFilterInput)`                              | `[Card]`                                                                                                                                                                                   | JWT  |
 | `cardsPage(filter, page = 1, pageSize = 20, sort = TITLE_ASC)` | `CardsPage { items: [Card!]!, total: Int!, page: Int!, pageSize: Int!, pageCount: Int! }`; `pageSize` is clamped to 1..100, `sort` is `TITLE_ASC`, `TITLE_DESC`, `RARITY_DESC` or `NEWEST` | JWT  |
 | `card(id: ID!)`                                                | `Card`                                                                                                                                                                                     | JWT  |
+| `rarities`, `rarity(id: ID!)`                                  | `RarityEntity { id, name, sortOrder: Int, createdAt, updatedAt }`; `rarities` is sorted by `sortOrder` ascending                                                                          | JWT  |
 | `categories`, `category(id: ID!)`                              | `CategoryEntity { id, name, createdAt, updatedAt }`                                                                                                                                        | JWT  |
 | `cardTypes`, `cardType(id: ID!)`                               | `CardTypeEntity { id, name, createdAt, updatedAt }`                                                                                                                                        | JWT  |
 | `myCardCollection`                                             | `CardCollection { userId: ID!, cards: [CollectionCard { cardId: ID!, quantity: Float!, firstObtainedAt }] }`                                                                               | JWT  |
 
 Field details:
 
-- `Card` is `{ id: ID!, title, description?, imageUrl, rarityId: Int!, categories: [CategoryEntity!]!, types: [CardTypeEntity!]!, createdAt, updatedAt }`.
+- `Card` is `{ id: ID!, title, description?, imageUrl, rarity: RarityEntity!, categories: [CategoryEntity!]!, types: [CardTypeEntity!]!, createdAt, updatedAt }`.
 - `CardsFilterInput` is `{ search?: String, rarityId?: Int, categoryIds?: [Int!], typeIds?: [Int!] }`;
   `search` is a case-insensitive part of the title. Values inside one
   field are OR-ed and the fields are AND-ed.
