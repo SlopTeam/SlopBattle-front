@@ -179,7 +179,8 @@ Rules:
 | Module          | Exports                                                                                                                                                                                                                 |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `auth.ts`       | `login(input)` → token, `register(input)` → token, `fetchMyProfile(token?)` → `User`, `updateMyProfile({ username? })`. The username is sent through `updateMyProfile` after register: `RegisterInput` has no username. |
-| `cards.ts`      | `getCards(filter?)`, `getCard(id)`. Types `Card` (API shape, `CardFieldsFragment`) and `CardsFilter`.                                                                                                                   |
+| `cards.ts`      | `getCards(filter?)`, `getCardsPage({ filter?, page, pageSize, sort }, options?)` → `{ items, total, page, pageCount }`, `getCard(id)`. Types `Card` (API shape, `CardFieldsFragment`), `CardsFilter`, `CardSort`.       |
+| `adapters.ts`   | `toCard(apiCard)`, `toRarity(rarityId)`, `toRarityId(rarity)`. Assumed rarity mapping: `rarityId` 1..6 = `common`..`goat` (same as the back office), `set` stays empty (B8).                                            |
 | `categories.ts` | `getCategories()`. Type `Category` (`{ id: string; name: string }`).                                                                                                                                                    |
 | `cardTypes.ts`  | `getCardTypes()`. Type `CardType` (`{ id: string; name: string }`).                                                                                                                                                     |
 | `token.ts`      | `getToken()`, `setToken()`, `clearToken()`                                                                                                                                                                              |
@@ -195,8 +196,7 @@ doesn't need a back.
 
 `fetchMyProfile` predates the `get*` rule. Keep the name; don't rename it in an unrelated change.
 
-`collection.ts` (the template above) and `adapters.ts` don't exist yet: create them when a task needs
-them.
+`collection.ts` (the template above) doesn't exist yet: create it when a task needs it.
 
 ## Back-end schema (back `develop`, read-only reference)
 
@@ -211,22 +211,24 @@ The schema is code-first and lives in memory: there is no `.graphql` file in the
 
 ### Queries
 
-| Operation                         | Returns                                                                                                 | Auth |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------- | ---- |
-| `myProfile`                       | `UserProfileModel { id: Int!, email, username?, avatarUrl?, coins: Int!, createdAt }`                   | JWT  |
-| `me`                              | `CurrentUserModel { id: Int!, email }` (unused)                                                         | JWT  |
-| `users(limit = 20, offset = 0)`   | `[PublicUserModel]` (a profile without email; limit is clamped to 1..100)                               | JWT  |
-| `user(id: Int!)`                  | `PublicUserModel`                                                                                       | JWT  |
-| `cards(filter: CardsFilterInput)` | `[Card]`                                                                                                | JWT  |
-| `card(id: ID!)`                   | `Card`                                                                                                  | JWT  |
-| `categories`, `category(id: ID!)` | `CategoryEntity { id, name, createdAt, updatedAt }`                                                     | JWT  |
-| `cardTypes`, `cardType(id: ID!)`  | `CardTypeEntity { id, name, createdAt, updatedAt }`                                                     | JWT  |
-| `myCardCollection`                | `CardCollection { userId, cards: [CollectionCard { cardId: ID!, quantity: Float!, firstObtainedAt }] }` | JWT  |
+| Operation                                                      | Returns                                                                                                                                                                                    | Auth |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---- |
+| `myProfile`                                                    | `UserProfileModel { id: Int!, email, username?, avatarUrl?, coins: Int!, createdAt }`                                                                                                      | JWT  |
+| `me`                                                           | `CurrentUserModel { id: Int!, email }` (unused)                                                                                                                                            | JWT  |
+| `users(limit = 20, offset = 0)`                                | `[PublicUserModel]` (a profile without email; limit is clamped to 1..100)                                                                                                                  | JWT  |
+| `user(id: Int!)`                                               | `PublicUserModel`                                                                                                                                                                          | JWT  |
+| `cards(filter: CardsFilterInput)`                              | `[Card]`                                                                                                                                                                                   | JWT  |
+| `cardsPage(filter, page = 1, pageSize = 20, sort = TITLE_ASC)` | `CardsPage { items: [Card!]!, total: Int!, page: Int!, pageSize: Int!, pageCount: Int! }`; `pageSize` is clamped to 1..100, `sort` is `TITLE_ASC`, `TITLE_DESC`, `RARITY_DESC` or `NEWEST` | JWT  |
+| `card(id: ID!)`                                                | `Card`                                                                                                                                                                                     | JWT  |
+| `categories`, `category(id: ID!)`                              | `CategoryEntity { id, name, createdAt, updatedAt }`                                                                                                                                        | JWT  |
+| `cardTypes`, `cardType(id: ID!)`                               | `CardTypeEntity { id, name, createdAt, updatedAt }`                                                                                                                                        | JWT  |
+| `myCardCollection`                                             | `CardCollection { userId, cards: [CollectionCard { cardId: ID!, quantity: Float!, firstObtainedAt }] }`                                                                                    | JWT  |
 
 Field details:
 
 - `Card` is `{ id: ID!, title, description?, imageUrl, rarityId: Int!, categories: [CategoryEntity!]!, types: [CardTypeEntity!]!, createdAt, updatedAt }`.
-- `CardsFilterInput` is `{ rarityId?: Int, categoryIds?: [Int!], typeIds?: [Int!] }`. Values inside one
+- `CardsFilterInput` is `{ search?: String, rarityId?: Int, categoryIds?: [Int!], typeIds?: [Int!] }`;
+  `search` is a case-insensitive part of the title. Values inside one
   field are OR-ed and the fields are AND-ed.
 - `imageUrl` is meant to be an absolute CDN link (the back's comment), but the back only checks that it
   is a string.

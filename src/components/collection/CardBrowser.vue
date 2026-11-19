@@ -5,7 +5,7 @@
         <h1>{{ title }}</h1>
         <p>{{ subtitle }}</p>
       </div>
-      <span class="browser__count">{{ formatCount(cards.length) }}</span>
+      <span class="browser__count">{{ formatCount(total) }}</span>
     </header>
 
     <div class="browser__controls">
@@ -13,20 +13,20 @@
         v-model="filters.query"
         class="browser__search"
         label="Rechercher"
-        placeholder="Rechercher une carte, une édition ou un type"
+        :placeholder="searchPlaceholder"
       />
       <div class="browser__filters">
         <FilterSelect
           v-model="filters.set"
-          label="Édition"
-          placeholder="Choisir une édition"
-          :options="setOptions"
+          :label="groupFilter.label"
+          :placeholder="groupFilter.placeholder"
+          :options="withAll(groupFilter.allLabel, groupFilter.options)"
         />
         <FilterSelect
           v-model="filters.type"
           label="Type"
           placeholder="Choisir un type"
-          :options="typeOptions"
+          :options="withAll('Tous les types', typeOptions)"
         />
         <FilterSelect
           v-model="filters.rarity"
@@ -44,8 +44,15 @@
         <p>Explorez les cartes en images.</p>
       </header>
 
-      <ul v-if="pageCards.length" ref="grid" class="panel__grid">
-        <li v-for="card in pageCards" :key="card.id">
+      <BaseAlert v-if="error" class="panel__error" :message="error" />
+      <!-- Always rendered, even empty, so that its columns can be measured before the first page -->
+      <ul
+        ref="grid"
+        class="panel__grid"
+        :class="{ 'panel__grid--empty': !cards.length, 'panel__grid--pending': pending }"
+        :aria-busy="pending"
+      >
+        <li v-for="card in cards" :key="card.id">
           <TcgCard
             :rarity="card.rarity"
             :illustration="card.illustration"
@@ -58,19 +65,24 @@
           />
         </li>
       </ul>
-      <p v-else class="panel__empty">Aucune carte ne correspond à votre recherche.</p>
+      <p v-if="!cards.length && pending" class="panel__empty" role="status">
+        Chargement des cartes…
+      </p>
+      <p v-else-if="!cards.length && !error" class="panel__empty">
+        Aucune carte ne correspond à votre recherche.
+      </p>
 
       <footer class="panel__pagination">
-        <p>{{ range.from }}–{{ range.to }} sur {{ formatCount(filtered.length) }}</p>
+        <p>{{ range.from }}–{{ range.to }} sur {{ formatCount(total) }}</p>
         <div class="panel__pages">
           <BaseButton
             label="Précédent"
             variant="secondary"
             size="xs"
-            :disabled="!hasPrevious"
+            :disabled="page <= 1"
             @click="previous"
           />
-          <BaseButton label="Suivant" size="xs" :disabled="!hasNext" @click="next" />
+          <BaseButton label="Suivant" size="xs" :disabled="page >= pageCount" @click="next" />
         </div>
       </footer>
     </div>
@@ -78,54 +90,85 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useTemplateRef } from 'vue'
+import { computed, useTemplateRef, watchEffect } from 'vue'
 import TcgCard from '@/components/card/TcgCard.vue'
+import BaseAlert from '@/components/ui/BaseAlert.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import FilterSelect, { type SelectOption } from '@/components/ui/FilterSelect.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
-import { useCardFilters, type CardSort } from '@/composables/useCardFilters'
+import type { CardFilters, CardSort } from '@/composables/useCardFilters'
 import { useGridColumns } from '@/composables/useGridColumns'
 import { RARITIES, RARITY_LABELS } from '@/constants/rarity'
 import type { Card } from '@/types/card'
 
-const props = defineProps<{
-  title: string
-  subtitle: string
-  cards: Card[]
-}>()
+/** First filter (`filters.set`): the set in the collection, the category in the catalogue */
+export interface GroupFilter {
+  label: string
+  placeholder: string
+  /** Label of the « no filter » option */
+  allLabel: string
+  options: SelectOption[]
+}
 
-// Pages always hold complete rows, whatever the number of columns
+const props = withDefaults(
+  defineProps<{
+    title: string
+    subtitle: string
+    /** Cards of the current page only */
+    cards: Card[]
+    /** Cards matching the filters, all pages */
+    total: number
+    pageCount: number
+    groupFilter: GroupFilter
+    typeOptions: SelectOption[]
+    searchPlaceholder?: string
+    /** A page is loading: the current cards stay visible */
+    pending?: boolean
+    error?: string
+  }>(),
+  {
+    searchPlaceholder: 'Rechercher une carte, une édition ou un type',
+    pending: false,
+    error: '',
+  },
+)
+
+const filters = defineModel<CardFilters>('filters', { required: true })
+const sort = defineModel<CardSort>('sort', { required: true })
+/** 1-based */
+const page = defineModel<number>('page', { required: true })
+/** Set by the browser: pages always hold complete rows, whatever the number of columns */
+const pageSize = defineModel<number>('pageSize', { required: true })
+
 const ROWS_PER_PAGE = 3
 const columns = useGridColumns(useTemplateRef('grid'))
+watchEffect(() => {
+  pageSize.value = columns.value * ROWS_PER_PAGE
+})
 
-const {
-  filters,
-  sort,
-  sets,
-  types,
-  filtered,
-  pageCards,
-  range,
-  hasPrevious,
-  hasNext,
-  previous,
-  next,
-} = useCardFilters(
-  () => props.cards,
-  () => columns.value * ROWS_PER_PAGE,
-)
+/** 1-based range of the cards shown, e.g. { from: 13, to: 24 } */
+const range = computed(() => ({
+  from: props.total ? (page.value - 1) * pageSize.value + 1 : 0,
+  to: Math.min(page.value * pageSize.value, props.total),
+}))
+
+function previous() {
+  page.value = Math.max(1, page.value - 1)
+}
+
+function next() {
+  page.value = Math.min(props.pageCount, page.value + 1)
+}
 
 const numberFormat = new Intl.NumberFormat('fr-FR')
 function formatCount(count: number): string {
   return `${numberFormat.format(count)} ${count > 1 ? 'cartes' : 'carte'}`
 }
 
-function toOptions(allLabel: string, values: string[]): SelectOption[] {
-  return [{ value: '', label: allLabel }, ...values.map((value) => ({ value, label: value }))]
+function withAll(allLabel: string, options: SelectOption[]): SelectOption[] {
+  return [{ value: '', label: allLabel }, ...options]
 }
 
-const setOptions = computed(() => toOptions('Toutes les éditions', sets.value))
-const typeOptions = computed(() => toOptions('Tous les types', types.value))
 const rarityOptions: SelectOption[] = [
   { value: '', label: 'Toutes les raretés' },
   ...RARITIES.map((rarity) => ({ value: rarity, label: RARITY_LABELS[rarity] })),
@@ -249,6 +292,18 @@ const sortOptions: (SelectOption & { value: CardSort })[] = [
       display: flex;
       flex-direction: column;
     }
+
+    &--empty {
+      padding: 0;
+    }
+
+    &--pending {
+      opacity: 0.6;
+    }
+  }
+
+  &__error {
+    margin: 20px 20px 0;
   }
 
   &__empty {
