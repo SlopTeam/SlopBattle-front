@@ -8,11 +8,11 @@ import {
   watch,
   type MaybeRefOrGetter,
 } from 'vue'
-import { toCard, toRarityId } from '@/api/adapters'
+import { toCard } from '@/api/adapters'
 import { getCardsPage, type CardSort as ApiCardSort, type CardsFilter } from '@/api/cards'
 import { ApiError } from '@/api/client'
+import { getRarities, type ApiRarity } from '@/api/rarities'
 import type { CardFilters, CardSort } from '@/composables/useCardFilters'
-import type { Rarity } from '@/constants/rarity'
 import type { Card } from '@/types/card'
 
 /** Wait after the last keystroke before searching, in ms */
@@ -28,10 +28,10 @@ const API_SORT: Record<CardSort, ApiCardSort> = {
 function toFilter(filters: CardFilters): CardsFilter {
   return {
     search: filters.query.trim() || undefined,
-    // In the catalogue, the group filter holds a category id
+    // In the catalogue, the group filter holds a category id and the rarity filter a rarity id
     categoryIds: filters.set ? [filters.set] : undefined,
     typeIds: filters.type ? [filters.type] : undefined,
-    rarityId: filters.rarity ? toRarityId(filters.rarity as Rarity) : undefined,
+    rarityId: filters.rarity ? Number(filters.rarity) : undefined,
   }
 }
 
@@ -43,7 +43,7 @@ function toMessage(error: unknown): string {
 
 /**
  * Cards loaded from the back page by page: search, filters and sort run on the back.
- * `filters.set` is a category id and `filters.type` a card type id.
+ * `filters.set` is a category id, `filters.type` a card type id and `filters.rarity` a rarity id.
  * @param pageSize can be reactive, e.g. to always fill complete grid rows
  */
 export function useCardsPage(pageSize: MaybeRefOrGetter<number> = 12) {
@@ -57,6 +57,23 @@ export function useCardsPage(pageSize: MaybeRefOrGetter<number> = 12) {
   const pageCount = ref(1)
   const loading = ref(false)
   const error = ref('')
+  /** Back rarities, the most common first; empty until loaded or when their request fails */
+  const rarities = shallowRef<ApiRarity[]>([])
+  let raritiesRequest: Promise<void> | undefined
+
+  // Never rejects: without rarities the cards still show, in the plainest style
+  function loadRarities() {
+    raritiesRequest ??= getRarities().then(
+      (list) => {
+        rarities.value = list
+      },
+      () => {
+        // Retried with the next page
+        raritiesRequest = undefined
+      },
+    )
+    return raritiesRequest
+  }
 
   let controller: AbortController | null = null
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -70,17 +87,21 @@ export function useCardsPage(pageSize: MaybeRefOrGetter<number> = 12) {
     loading.value = true
     error.value = ''
     try {
-      const result = await getCardsPage(
-        {
-          filter: toFilter(filters),
-          page: page.value,
-          pageSize: size.value,
-          sort: API_SORT[sort.value],
-        },
-        { signal: current.signal },
-      )
+      const [result] = await Promise.all([
+        getCardsPage(
+          {
+            filter: toFilter(filters),
+            page: page.value,
+            pageSize: size.value,
+            sort: API_SORT[sort.value],
+          },
+          { signal: current.signal },
+        ),
+        // The card styles depend on the rarity ranks
+        loadRarities(),
+      ])
       if (current.signal.aborted) return
-      cards.value = result.items.map(toCard)
+      cards.value = result.items.map((card) => toCard(card, rarities.value))
       total.value = result.total
       pageCount.value = result.pageCount
       // Past the last page (cards removed in the meantime): show the last one
@@ -140,6 +161,7 @@ export function useCardsPage(pageSize: MaybeRefOrGetter<number> = 12) {
     pageCount,
     loading,
     error,
+    rarities,
     /** Loads the current page again, e.g. after an error */
     reload: load,
   }

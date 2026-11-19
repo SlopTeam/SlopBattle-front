@@ -21,7 +21,11 @@ const CARD_FIELDS = /* GraphQL */ `
     title
     description
     imageUrl
-    rarityId
+    rarity {
+      id
+      name
+      sortOrder
+    }
     createdAt
     updatedAt
     categories {

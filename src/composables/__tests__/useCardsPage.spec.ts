@@ -3,18 +3,25 @@ import { effectScope, ref } from 'vue'
 import { ApiError } from '@/api/client'
 import { SEARCH_DELAY, useCardsPage } from '@/composables/useCardsPage'
 
-const { getCardsPage } = vi.hoisted(() => ({
+const { getCardsPage, getRarities } = vi.hoisted(() => ({
   getCardsPage: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  getRarities: vi.fn<() => Promise<unknown>>(),
 }))
 
 vi.mock('@/api/cards', () => ({ getCardsPage }))
+vi.mock('@/api/rarities', () => ({ getRarities }))
+
+const rarities = [
+  { id: '7', name: 'Mid', sortOrder: 1 },
+  { id: '3', name: 'Based', sortOrder: 2 },
+]
 
 const apiCard = {
   id: '1',
   title: 'Skibidi',
   description: null,
   imageUrl: 'https://cdn.example/1.png',
-  rarityId: 2,
+  rarity: { id: '3', name: 'Based', sortOrder: 2 },
   createdAt: '2026-11-18T10:00:00.000Z',
   updatedAt: '2026-11-18T10:00:00.000Z',
   categories: [],
@@ -34,6 +41,7 @@ describe('useCardsPage', () => {
     vi.resetAllMocks()
     vi.useFakeTimers()
     getCardsPage.mockResolvedValue(pageOf(1))
+    getRarities.mockResolvedValue(rarities)
   })
 
   afterEach(() => {
@@ -66,6 +74,30 @@ describe('useCardsPage', () => {
     expect(loading.value).toBe(false)
   })
 
+  it('exposes the back rarities and loads them only once', async () => {
+    const { page, rarities: loaded } = useCardsPage(12)
+    await settle()
+    page.value = 2
+    await settle()
+    expect(loaded.value).toEqual(rarities)
+    expect(getRarities).toHaveBeenCalledTimes(1)
+  })
+
+  it('still shows the cards, in the plainest style, when the rarities fail', async () => {
+    getRarities.mockRejectedValueOnce(new Error('boom'))
+    const { cards, error, page, rarities: loaded } = useCardsPage(12)
+    await settle()
+    expect(error.value).toBe('')
+    expect(cards.value.map((card) => card.rarity)).toEqual(['common'])
+    expect(loaded.value).toEqual([])
+
+    // Retried with the next page
+    page.value = 2
+    await settle()
+    expect(getRarities).toHaveBeenCalledTimes(2)
+    expect(cards.value.map((card) => card.rarity)).toEqual(['uncommon'])
+  })
+
   it('sends the filters and the sort, and goes back to page 1', async () => {
     const { filters, sort, page } = useCardsPage(12)
     await settle()
@@ -74,7 +106,7 @@ describe('useCardsPage', () => {
 
     filters.set = '4'
     filters.type = '5'
-    filters.rarity = 'legendary'
+    filters.rarity = '5'
     sort.value = 'rarity-desc'
     await settle()
 

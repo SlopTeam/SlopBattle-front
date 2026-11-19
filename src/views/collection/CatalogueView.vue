@@ -12,6 +12,7 @@
     :page-count="pageCount"
     :group-filter="categoryFilter"
     :type-options="typeOptions"
+    :rarity-options="rarityOptions"
     :pending="loading"
     :error="error"
   />
@@ -27,7 +28,8 @@ import { useApi } from '@/composables/useApi'
 import { useCardsPage } from '@/composables/useCardsPage'
 
 const pageSize = ref(12)
-const { filters, sort, page, cards, total, pageCount, loading, error } = useCardsPage(pageSize)
+const { filters, sort, page, cards, total, pageCount, loading, error, rarities } =
+  useCardsPage(pageSize)
 
 const collator = new Intl.Collator('fr', { sensitivity: 'base' })
 
@@ -52,4 +54,8 @@ const categoryFilter = computed<GroupFilter>(() => ({
   options: categories.data.value ?? [],
 }))
 const typeOptions = computed(() => types.data.value ?? [])
+// Kept in the back's order, from the most common to the rarest
+const rarityOptions = computed(() =>
+  rarities.value.map(({ id, name }): SelectOption => ({ value: id, label: name })),
+)
 </script>

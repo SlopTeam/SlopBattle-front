@@ -462,9 +462,12 @@ Full reference, with the back's schema, errors and gaps: [docs/agents/api.md](do
   - Labels: Mid, Based, Sigma, Chad, Ascended, Goated, in `RARITY_LABELS`.
   - The design handoff uses the labels as codes (mid, sigma…). Never copy them into code.
   - `goat` exists only in the front and has no design yet.
-  - The back only has `rarityId: Int`, and nothing maps it to a code. **Ask** the human for the mapping
-    before you write one. Write only the mapping you were given, in `toRarity()` in
-    `src/api/adapters.ts`, with `TODO(back): rarity contract (B2)`.
+  - The back has a `Rarity { id, name, sortOrder }` entity (`rarities` query, sorted by `sortOrder`).
+    Mapping chosen by the human: the n-th rarity of that list takes the n-th code (`common`…`goat`),
+    an unknown one falls back to `common`. It lives in `toRarity()` in `src/api/adapters.ts`, with
+    `TODO(back): rarity contract (B2)`. Ask before changing it.
+  - The catalogue's rarity filter lists the back's rarities (value = id, label = back `name`); the
+    collection (mocks) still lists the codes with `RARITY_LABELS`.
 - **Cards**: the UI `Card` (`@/types/card`) and the API `Card` (`@/api/cards`) differ:
 
   | UI `Card`                              | API `Card`                    | Adapter rule                      |
@@ -472,7 +475,7 @@ Full reference, with the back's schema, errors and gaps: [docs/agents/api.md](do
   | `id: number`                           | `id: string`                  | `Number(id)`                      |
   | `name`                                 | `title`                       | copy                              |
   | `illustration`                         | `imageUrl`                    | copy                              |
-  | `rarity: Rarity`                       | `rarityId: number`            | `toRarity()`: ask first           |
+  | `rarity: Rarity`                       | `rarity: { id, name, sortOrder }` | `toRarity(id, rarities)`: rank |
   | `types: string[]`                      | `types: { id, name }[]`       | names                             |
   | `categories: string[]`                 | `categories: { id, name }[]`  | names                             |
   | `set: string` (the « Édition » filter) | none                          | **ask** which category is the set |
