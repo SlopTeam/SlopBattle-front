@@ -44,11 +44,12 @@ export default defineConfig(({ mode }) => {
       },
     },
     // In dev, back-end routes go through Vite: same origin, so no CORS to configure on the back.
-    // Only /auth/google is proxied: /auth/callback is a front-end route.
+    // Only /auth/google is proxied: /auth/callback is a front-end route. /media serves uploaded card images.
     server: {
       proxy: {
         '/graphql': apiTarget,
         '/auth/google': apiTarget,
+        '/media': apiTarget,
       },
     },
   }

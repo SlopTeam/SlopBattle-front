@@ -33,7 +33,7 @@ Read this file entirely before your first change. Then open the guide for the ar
 7. **UI text is French and uses vouvoiement** ("Connectez-vous", "Réessayez"). Code, comments, commits and
    docs are in English. PR titles and bodies are in French.
 8. **Navigate with named routes** (`{ name: 'collection_list' }`), never with hard-coded paths. Route
-   names are snake_case. Never create a route that starts with `/graphql` or `/auth/google`.
+   names are snake_case. Never create a route that starts with `/graphql`, `/auth/google` or `/media`.
 9. **Two `Card` types exist.** UI code uses `Card` from `@/types/card`. `Card` from `@/api/cards` is the
    raw API shape. Convert in `src/api/adapters.ts` only.
 10. **Rarities use dev codes** (`common` … `goat`). User-facing names come only from `RARITY_LABELS`.
@@ -270,7 +270,7 @@ src/
   views/<domain>/<Name>View.vue   one view per route; domains: auth, account, collection, game, system
 e2e/                      Playwright specs (vue.spec.ts is the create-vue scaffold)
 docs/design-handoff/      Figma handoff (French, written before AGENTS.md) and exported assets
-docker/ Dockerfile        nginx image: serves dist/ and proxies /graphql and /auth/google
+docker/ Dockerfile        nginx image: serves dist/ and proxies /graphql, /auth/google and /media
 .github/workflows/ci.yml  CI, then the Docker image, then the Portainer deploy
 ```
 
@@ -392,8 +392,8 @@ Details and the full token list are in [docs/agents/ui.md](docs/agents/ui.md).
 - Protected pages need `meta: { requiresAuth: true }`. Login and register pages take
   `meta: { guestOnly: true }`.
 - Add new routes **before** the `// System` block: the `/:pathMatch(.*)*` catch-all must stay last.
-- Never create a front route that starts with `/graphql` or `/auth/google`: those paths are proxied to
-  the back. `/auth/callback` is a front route (the Google return).
+- Never create a front route that starts with `/graphql`, `/auth/google` or `/media`: those paths are
+  proxied to the back. `/auth/callback` is a front route (the Google return).
 - The guard sends a logged-in user who has no pseudo to `choose_username`, from any route except
   `auth_callback`.
 - Hard-coded paths are allowed only for a `?redirect=` value checked by `toInternalPath`, and in specs.

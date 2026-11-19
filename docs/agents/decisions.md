@@ -66,7 +66,7 @@ variant. Don't rewrite it just for that.
 Don't be surprised by these. Don't fix them inside an unrelated change: fixing one is its own task.
 
 - **Production back-end routing**:
-  - the nginx image proxies `/graphql` and `/auth/google` to `BACKEND_UPSTREAM`. It must be set in the
+  - the nginx image proxies `/graphql`, `/auth/google` and `/media` to `BACKEND_UPSTREAM`. It must be set in the
     Portainer stack to the back's root, e.g. `http://api:3000`. Otherwise those routes return 503;
   - the back's `FRONT_URL` must be the deployed front's exact origin;
   - the back's `GOOGLE_CALLBACK_URL` must be absolute (`https://<front>/auth/google/callback`) and

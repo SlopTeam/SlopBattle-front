@@ -36,8 +36,8 @@ interface GqlOptions { token?: string | null; signal?: AbortSignal }
   prefix such as `https://host/api` is kept.
 - Which paths are forwarded:
   - Vite matches its proxy keys **by prefix**, so `/graphql-explorer` would be proxied in dev;
-  - nginx matches `^/(graphql|auth/google)(/|$)`, so it forwards `/graphql/…` but not
-    `/graphql-explorer`. Never create a front route that starts with either path;
+  - nginx matches `^/(graphql|auth/google|media)(/|$)`, so it forwards `/graphql/…` but not
+    `/graphql-explorer`. Never create a front route that starts with one of these paths;
   - `/auth/google` also covers `/auth/google/callback`;
   - `/auth/callback` is **not** proxied, because it is a front route.
   - Never add `/auth` as a whole to a proxy.
