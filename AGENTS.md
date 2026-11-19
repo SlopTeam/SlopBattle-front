@@ -105,8 +105,8 @@ and build a collection. Planned later: quests, an economy (SlopCOIN) and battles
 - Design source of truth: the Figma file. See [docs/agents/ui.md](docs/agents/ui.md#working-from-figma).
 - Current state:
   - Wired to the back: auth (email/password, Google, choosing a pseudo).
-  - The catalogue and the collection still render **mock data** (`src/mocks/cards.ts`).
-  - `src/api/` has card functions that no view calls yet.
+  - The catalogue loads its cards page by page from the back (`cardsPage`, through `useCardsPage`).
+  - The collection still renders **mock data** (`src/mocks/cards.ts`).
   - Boosters, profile and settings pages are placeholders.
 
 ## Stack
@@ -219,7 +219,7 @@ src/
     token.ts              JWT in localStorage ('slop-battle:access-token'), the only accessor
     generated/graphql.ts  types written by `npm run codegen` (committed, never edited)
     auth.ts cards.ts categories.ts cardTypes.ts   one module per back-end resource
-    adapters.ts           (to create) API shapes → UI types, pure functions
+    adapters.ts           API shapes → UI types, pure functions
   assets/
     styles/               main.scss → _fonts, _tokens, _rarity, _base; abstracts/ = maps + mixins
     icons/ textures/ images/ fonts/inter/
@@ -230,7 +230,7 @@ src/
     card/                 TcgCard, CardContent
     collection/           CardBrowser (search, filters, sort, paged grid)
     layout/               HeaderComponent, FooterComponent
-  composables/            useX.ts: useApi, useAuthRedirect, useCardFilters, useGridColumns
+  composables/            useX.ts: useApi, useAuthRedirect, useCardFilters, useCardsPage, useGridColumns
   constants/              auth.ts (length rules), rarity.ts (RARITIES, RARITY_LABELS)
   mocks/                  typed fake data until the back provides it (cards.ts today)
   router/index.ts         routes, meta flags, global guard, session-expiry redirect

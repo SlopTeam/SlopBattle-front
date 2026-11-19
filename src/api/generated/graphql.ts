@@ -3,9 +3,13 @@ type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] }
 /** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> =
   T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never }
+export type CardSort = 'NEWEST' | 'RARITY_DESC' | 'TITLE_ASC' | 'TITLE_DESC'
+
 export type CardsFilterInput = {
   categoryIds?: Array<number> | null | undefined
   rarityId?: number | null | undefined
+  /** Case-insensitive substring of the title */
+  search?: string | null | undefined
   typeIds?: Array<number> | null | undefined
 }
 
@@ -87,6 +91,32 @@ export type GetCardsQuery = {
     categories: Array<{ id: string; name: string }>
     types: Array<{ id: string; name: string }>
   }>
+}
+
+export type GetCardsPageQueryVariables = Exact<{
+  filter?: CardsFilterInput | null | undefined
+  page: number
+  pageSize: number
+  sort: CardSort
+}>
+
+export type GetCardsPageQuery = {
+  cardsPage: {
+    total: number
+    page: number
+    pageCount: number
+    items: Array<{
+      id: string
+      title: string
+      description: string | null
+      imageUrl: string
+      rarityId: number
+      createdAt: string
+      updatedAt: string
+      categories: Array<{ id: string; name: string }>
+      types: Array<{ id: string; name: string }>
+    }>
+  }
 }
 
 export type GetCardQueryVariables = Exact<{

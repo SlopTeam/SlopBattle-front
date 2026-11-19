@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { getCard, getCards } from '@/api/cards'
+import { getCard, getCards, getCardsPage } from '@/api/cards'
 
 const { gql } = vi.hoisted(() => ({
   gql: vi.fn<(query: string, variables?: Record<string, unknown>) => Promise<unknown>>(),
@@ -28,5 +28,26 @@ describe('getCard', () => {
     gql.mockResolvedValueOnce({ card: { id: '7' } })
     await expect(getCard('7')).resolves.toEqual({ id: '7' })
     expect(gql.mock.lastCall?.[1]).toEqual({ id: '7' })
+  })
+})
+
+describe('getCardsPage', () => {
+  it('sends page, size, sort and the filter with number ids, and returns the page', async () => {
+    const page = { items: [], total: 0, page: 2, pageCount: 1 }
+    gql.mockResolvedValueOnce({ cardsPage: page })
+    await expect(
+      getCardsPage({
+        filter: { search: 'slop', rarityId: 1, categoryIds: ['3'] },
+        page: 2,
+        pageSize: 12,
+        sort: 'TITLE_ASC',
+      }),
+    ).resolves.toBe(page)
+    expect(gql.mock.lastCall?.[1]).toEqual({
+      filter: { search: 'slop', rarityId: 1, categoryIds: [3], typeIds: undefined },
+      page: 2,
+      pageSize: 12,
+      sort: 'TITLE_ASC',
+    })
   })
 })
